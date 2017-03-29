@@ -87,3 +87,7 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+data/
+venv/
+competition_docs/
