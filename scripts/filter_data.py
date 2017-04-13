@@ -13,6 +13,14 @@ outputs_2013 = dataDir+'/outputs_2013.csv'
 
 ref_cutoff = 2014
 
+def check_data():
+	cDic = {}
+	with open(outputs) as f:
+		next(f)
+		for line in reader(f, delimiter=','):
+			cDic[len(line)]=''
+	print cDic
+
 def filter_people():
 	print "Finding people after ref"
 	w = open(staff_2013,'w')
@@ -108,6 +116,7 @@ def parse_json(pub_dic):
 			print i+ ".json has no DOI"
 
 def main():
+	#check_data()
 	filter_people()
 	filter_authors()
 	filter_output()
