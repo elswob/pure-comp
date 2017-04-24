@@ -57,7 +57,6 @@ def load_org():
 			session.run(com)
 
 def load_staff():
-	#staff
 	#PERSON_ID,PUBLISHED_NAME,FORENAME,SURNAME,ORGANISATION_CODE,TYPE,JOB_TITLE,START_DATE,END_DATE
 	staffDic = {}
 	with open('data/staff.csv', 'rb') as a:
@@ -77,10 +76,43 @@ def load_staff():
 	i="CREATE index on :Staff(person_id);"
 	session.run(i)
 
+def load_outputs():
+	#PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT
+	pubDic = {}
+	with open('data/outputs.csv', 'rb') as a:
+		next(a)
+		for line in reader(a, delimiter=','):
+			line = string_format(line)
+			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
+			if PUBLICATION_ID not in pubDic:
+				if PUBLICATION_YEAR == '':
+					PUBLICATION_YEAR = '0'
+				if PUBLICATION_MONTH == '':
+					PUBLICATION_MONTH = '0'
+				if PUBLICATION_DAY == '':
+					PUBLICATION_DAY = '0'
+				com = "MERGE (p:Publication {pub_id:"+PUBLICATION_ID+",title:'"+TITLE+"',type:"+TYPE_NO+",pub_day:"+PUBLICATION_DAY+"," \
+				"pub_month:"+PUBLICATION_MONTH+",pub_year:"+PUBLICATION_YEAR+",abstract:'"+ABSTRACT+"'});"
+				print com
+				session.run(com)
+			pubDic[PUBLICATION_ID]=''
 
+	i="CREATE index on :Publicatopn(pub_id);"
+	session.run(i)
 
+def load_authors():
+	#PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME
+	with open('data/authors.csv', 'rb') as a:
+		next(a)
+		for line in reader(a, delimiter=','):
+			person,publication,name = line
+			com = "MATCH (s:Staff {person_id:"+person+"}) , (p:Publication {pub_id:"+publication+"}) merge (s)-[:PUBLISHED]-(p);"
+			print com
+			session.run(com)
 
 if __name__ == '__main__':
 	#load_org()
-	load_staff()
+	#load_staff()
+	#load_outputs()
+	load_authors()
 
