@@ -20,6 +20,10 @@ def neo4j_check():
 	except:
 		print "session not ok"
 
+def connect():
+	session = driver.session()
+	return session
+
 def string_format(line):
 	#deal with unicode things
 	line = [l.replace("\\","/") for l in line]
@@ -110,9 +114,12 @@ def load_authors():
 			print com
 			session.run(com)
 
-if __name__ == '__main__':
+def load_data():
 	#load_org()
 	#load_staff()
 	#load_outputs()
 	load_authors()
+
+#if __name__ == '__main__':
+
 
