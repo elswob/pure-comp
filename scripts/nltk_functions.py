@@ -11,6 +11,9 @@ from collections import defaultdict
 bigram_measures = nltk.collocations.BigramAssocMeasures()
 trigram_measures = nltk.collocations.TrigramAssocMeasures()
 
+#analyse output
+# awk -F '\t' '$2>50' output/nltk_counts.txt | sort -t$'\t' -k4 -nr | less
+
 #http://www.nltk.org/book/ch01.html
 
 def content_fraction(text):
@@ -26,27 +29,34 @@ def filter_stopwords_and_length(text,wordLength):
 #Section 1 (lexical diversity)
 def count_things():
 	session = neo4j_functions.session
-	com = "match (o:Org)--(s:Staff)--(p:Publication) return distinct o.short_name as o, p.abstract as a, p.title as t, p.pub_id as pid limit 1000;"
+	com = "match (o:Org)--(s:Staff)--(p:Publication) return distinct o.short_name as o, p.abstract as a, p.title as t, p.pub_id as pid;"
 	pubText = defaultdict(dict)
 	#pubCount = {}
-	#create single text variable
-	allText = ''
+	counter=0
+	print "Getting data from graph"
 	for res in session.run(com):
+		if counter % 1000 == 0:
+			print counter
+		counter+=1
 		abstract = res['a']
 		title = res['t']
 		org = res['o']
 		pid = res['pid']
-		allText+=abstract
 		if len(abstract)>1:
-			if org in pubText:
-				if pid in pubText[org]:
-					pubText[org][pid]+=abstract
-					#pubText[org]+=title
-				else:
-					pubText[org][pid]=abstract
-			else:
-				pubText[org][pid]=abstract
+			pubText[org][pid]=abstract
 
+	print "Creating single text object"
+	#create single text variable
+	allText = ''
+	aCheck = {}
+	for org in pubText:
+		print '\t'+org
+		for pid in pubText[org]:
+			if pid not in aCheck:
+				allText+=pubText[org][pid]
+			aCheck[pid]=''
+
+	print "Calculating background token frequencies"
 	#get background token frequency
 	bTokens = word_tokenize(allText)
 	bTokens_no_short_and_no_stopwords = filter_stopwords_and_length(bTokens,5)
@@ -55,7 +65,7 @@ def count_things():
 	print fdist.most_common(10)
 
 	o = open('output/nltk_counts.txt', 'w')
-	o.write('org\tnum_text\tmean_num_tokens\tmean_num_types\tlexical_diversity\tcontent_fraction\n')
+	o.write('org\tnum_text\tmean_num_tokens\tmean_num_types\tmean_lexical_diversity\tmean_content_fraction\n')
 	for org in pubText:
 		mean_num_tokens=0
 		mean_num_types=0
@@ -93,7 +103,8 @@ def count_things():
 		mean_lexical_diversity=mean_lexical_diversity/aCount
 		mean_content_fraction=mean_content_fraction/aCount
 
-		o.write(org + '\t' + str(aCount) + '\t' + str("%.4f" % mean_num_tokens) + "\t" + str("%.4f" % mean_num_types) + "\t" + str("%.4f" % mean_lexical_diversity) + "\t" + str("%.4f" % mean_content_fraction) + "\n")
+		if aCount>10:
+			o.write(org + '\t' + str(aCount) + '\t' + str("%.4f" % mean_num_tokens) + "\t" + str("%.4f" % mean_num_types) + "\t" + str("%.4f" % mean_lexical_diversity) + "\t" + str("%.4f" % mean_content_fraction) + "\n")
 
 		#colocations
 		#http://www.nltk.org/howto/collocations.html
@@ -103,7 +114,5 @@ def count_things():
 		#ignore bigrams that feature less thatn x times
 		finder.apply_freq_filter(5)
 		#print finder.nbest(bigram_measures.pmi, 10)
-
-	#cat output/nltk_counts.txt | sort -t$'\t' -k5 -nr | less
 
 count_things()
