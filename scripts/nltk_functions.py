@@ -31,7 +31,7 @@ def filter_stopwords_and_length(text,wordLength):
 #Section 1 (lexical diversity)
 def count_things():
 	session = neo4j_functions.session
-	com = "match (o:Org)--(s:Staff)--(p:Publication) return distinct o.short_name as o, p.abstract as a, p.title as t, p.pub_id as pid limit 1000;"
+	com = "match (o:Org)--(s:Staff)--(p:Publication) return distinct o.short_name as o, p.abstract as a, p.title as t, p.pub_id as pid;"
 	pubText = defaultdict(dict)
 	#pubCount = {}
 	counter=0
@@ -85,7 +85,7 @@ def count_things():
 		mean_num_types=0
 		mean_lexical_diversity=0
 		mean_content_fraction=0
-		print '\n### '+org+' ####'
+		print '### processing '+org+' ###'
 		aCount = len(pubText[org])
 		aText=''
 		for a in pubText[org]:
@@ -140,13 +140,24 @@ def count_things():
 		#print finder.nbest(bigram_measures.pmi, 10)
 
 	for org in masterDic:
-		print '### '+org+' ###'
+		print '\n### '+org+' ###'
 		c_sorted = sorted(masterDic[org].items(), key=operator.itemgetter(1),reverse=True)
 		print len(c_sorted),list(c_sorted)[:10]
+		#count unique types compared to background
+		uCount={}
+		for k in masterDic[org]:
+			if masterDic[org][k] == backgroundDic[k]:
+				uCount[k]=masterDic[org][k]
+		print 'uniques = '+str(len(uCount))
+		uCount_sorted = sorted(uCount.items(), key=operator.itemgetter(1),reverse=True)
+		print list(uCount_sorted)[:10]
 
-	print '### Background freqs ###'
+	print '\n### Background freqs ###'
 	b_sorted = sorted(backgroundDic.items(), key=operator.itemgetter(1),reverse=True)
 	print len(b_sorted),list(b_sorted)[:10]
+
+#def synonyms():
+	#http://www.nltk.org/book/ch02.html
 
 def visualise():
 	print "Creating plots"
