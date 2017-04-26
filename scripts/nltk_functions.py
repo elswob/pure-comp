@@ -9,6 +9,11 @@ from nltk import FreqDist
 from nltk.corpus import stopwords
 from collections import defaultdict
 #import matplotlib.pyplot as plt
+#import matplotlib
+#matplotlib.style.use('ggplot')
+from csv import reader
+import pandas as pd
+import numpy as np
 
 bigram_measures = nltk.collocations.BigramAssocMeasures()
 trigram_measures = nltk.collocations.TrigramAssocMeasures()
@@ -161,5 +166,14 @@ def count_things():
 
 def visualise():
 	print "Creating plots"
+	p = pd.read_csv('output/nltk_counts.txt',sep='\t')
+	print p
 
-count_things()
+	ts = pd.Series(np.random.randn(1000), index=pd.date_range('1/1/2000', periods=1000))
+	ts = ts.cumsum()
+	p = ts.plot()
+	fig = p.get_figure()
+	fig.savefig('figure.pdf')
+
+#count_things()
+visualise()
