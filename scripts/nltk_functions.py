@@ -8,7 +8,7 @@ from nltk.collocations import *
 from nltk import FreqDist
 from nltk.corpus import stopwords
 from collections import defaultdict
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 #import matplotlib
 #matplotlib.style.use('ggplot')
 from csv import reader
@@ -17,6 +17,8 @@ import numpy as np
 
 bigram_measures = nltk.collocations.BigramAssocMeasures()
 trigram_measures = nltk.collocations.TrigramAssocMeasures()
+
+session = neo4j_functions.session
 
 #analyse output
 # awk -F '\t' '$2>50' output/nltk_counts.txt | sort -t$'\t' -k4 -nr | less
@@ -35,8 +37,8 @@ def filter_stopwords_and_length(text,wordLength):
 
 #Section 1 (lexical diversity)
 def count_things():
-	session = neo4j_functions.session
 	com = "match (o:Org)--(s:Staff)--(p:Publication) return distinct o.short_name as o, p.abstract as a, p.title as t, p.pub_id as pid;"
+	print com
 	pubText = defaultdict(dict)
 	#pubCount = {}
 	counter=0
@@ -167,13 +169,60 @@ def count_things():
 def visualise():
 	print "Creating plots"
 	p = pd.read_csv('output/nltk_counts.txt',sep='\t')
-	print p
+	#sort and remove low texts
+	p_filter = p.sort_values('mean_lexical_diversity',ascending=False)
+	p_filter = p_filter[p_filter['num_text']>20]
+	#print p
+	#p1 = p_filter[['org','mean_lexical_diversity','mean_content_fraction','mean_num_tokens','mean_num_types']].plot.line(x='org',rot=90,fontsize=5,legend=False,secondary_y=['mean_num_tokens','mean_num_types'])
+	p1 = p_filter[['org','mean_lexical_diversity','mean_content_fraction']].plot.line(x='org',rot=90,fontsize=5,legend=False)
+	p2 = p_filter[['org','num_text']].plot.bar(x='org',rot=90,secondary_y=['num_text'],fontsize=5,color='green',ax=p1,legend=False)
+	#move legend
+	lines, labels = p1.get_legend_handles_labels()
+	lines2, labels2 = p2.get_legend_handles_labels()
+	p2.legend(lines + lines2, labels + labels2, loc='upper center',prop={'size':6})
+	#h1, l1 = lines.get_legend_handles_labels()
+	#lines.legend(loc='upper center')
+	#pp.legend(loc='upper center')
+	plt.gcf().subplots_adjust(bottom=0.4)
+	fig = p2.get_figure()
+	fig.savefig('output/lexical_diversity_and_num_texts.pdf')
 
-	ts = pd.Series(np.random.randn(1000), index=pd.date_range('1/1/2000', periods=1000))
-	ts = ts.cumsum()
-	p = ts.plot()
-	fig = p.get_figure()
-	fig.savefig('figure.pdf')
+	p3 = p_filter[['org','mean_lexical_diversity','mean_content_fraction','mean_num_tokens','mean_num_types']].plot.line(x='org',rot=90,fontsize=5,secondary_y=['mean_num_tokens','mean_num_types'])
+	p3.legend(loc='upper center',prop={'size':6})
+	plt.gcf().subplots_adjust(bottom=0.4)
+	fig = p3.get_figure()
+	fig.savefig('output/lexical_diversity_and_tokens.pdf')
+
+def staff_per_org():
+	print "staff_per_org"
+	#plot output normalised by number of staff
+	com = 'match (o:Org)--(s:Staff)--(p:Publication) return o.short_name as o,count(distinct s) as s ,count( distinct p) as p;'
+	d = []
+	for res in session.run(com):
+		d.append({'org':res['o'],'staffCount':res['s'],'pubCount':res['p']})
+	df = pd.DataFrame(d)
+
+	#line of best fit - http://stackoverflow.com/questions/37234163/how-to-add-a-line-of-best-fit-to-scatter-plot
+	z = np.polyfit(x=df.loc[:, 'staffCount'], y=df.loc[:, 'pubCount'], deg=1)
+	p = np.poly1d(z)
+	df['trendline'] = p(df.loc[:, 'staffCount'])
+
+	print df
+	df = df[df['staffCount']>10]
+	#print df
+	#p = df[['staffCount','pubCount']].plot(kind='scatter', x='staffCount', y='pubCount',logy=True, logx=True)
+	ax = df[['staffCount','pubCount']].plot(kind='scatter', x='staffCount', y='pubCount')
+	df.set_index('staffCount', inplace=True)
+	df.trendline.sort_index(ascending=False).plot(ax=ax)
+	plt.gca().invert_xaxis()
+	fig = ax.get_figure()
+	fig.savefig('output/normalised_pubs_per_org.pdf')
+
+def cross_org_pubs():
+	print 'cross_org_pubs'
+	#calculate numbers of publications per organisation that have authors from other orgs
+
 
 #count_things()
-visualise()
+#visualise()
+staff_per_org()
