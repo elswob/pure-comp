@@ -221,8 +221,80 @@ def staff_per_org():
 def cross_org_pubs():
 	print 'cross_org_pubs'
 	#calculate numbers of publications per organisation that have authors from other orgs
+	countDic = defaultdict(dict)
+	orgDic = {}
+	staffDic = {}
+	pubDic = defaultdict(dict)
+	crossOrg=defaultdict(lambda: defaultdict(dict))
+	com='match (o:Org)--(s:Staff)--(p:Publication) return o.code,o.short_name,s.person_id,s.published_name,p.pub_id;'
+	#create dictionaries
+	for res in session.run(com):
+		org_code = res['o.code']
+		org_name = res['o.short_name']
+		staff_code = res['s.person_id']
+		staff_name = res['s.published_name']
+		pid = res['p.pub_id']
+		#countDic[org_code][staff_code][pid]=''
+		orgDic[org_code]=org_name
+		staffDic[staff_code]=staff_name
+		#crossOrg[org_code]['1']=''
+		#crossOrg[org_code]['2']=''
+		if pid in pubDic:
+			if org_code in pubDic[pid]:
+				pubDic[pid][org_code]+=1
+			else:
+				pubDic[pid][org_code] = 1
+		else:
+			pubDic[pid][org_code] = 1
+	#parse again
+
+	for res in session.run(com):
+		org_code = res['o.code']
+		org_name = res['o.short_name']
+		staff_code = res['s.person_id']
+		staff_name = res['s.published_name']
+		pid = res['p.pub_id']
+		if len(pubDic[pid])==1:
+			crossOrg[org_code]['1'][pid]=''
+		else:
+			crossOrg[org_code]['2'][pid]=''
+
+	orgs_per_org = defaultdict(dict)
+	for org in crossOrg:
+		for i in crossOrg[org]:
+			if i == '2':
+				for pid in crossOrg[org][i]:
+					print pid
+					for o in pubDic[pid]:
+						orgs_per_org[org][o]=''
+	#print orgs_per_org
+
+	o = open('output/cross_pubs.txt', 'w')
+	o.write('org\tsingle\tmulti\multi_over_single\ttorg_num\torg_num_per_multi\n')
+	for org in crossOrg:
+		print '### '+orgDic[org]+' ###'
+		o.write(orgDic[org])
+		orgNum=len(crossOrg[org]['1'])
+		crossNum = len(crossOrg[org]['2'])
+		crossPerPub=0
+		if crossNum>0 and orgNum>0:
+			crossPerPub = crossNum/orgNum
+		for i in crossOrg[org]:
+			print i,len(crossOrg[org][i])
+			o.write('\t'+str(len(crossOrg[org][i])))
+		crossNumPerCross=0
+
+
+		if crossNum>0:
+			crossNumPerCross = len(orgs_per_org[org])/crossNum
+		o.write('\t'+str("%.4f" % crossPerPub)+'\t'+str(len(orgs_per_org[org]))+'\t'+str("%.4f" % crossNumPerCross))
+		o.write('\n')
+	o.close()
+
+
 
 
 #count_things()
 #visualise()
-staff_per_org()
+#staff_per_org()
+cross_org_pubs()
