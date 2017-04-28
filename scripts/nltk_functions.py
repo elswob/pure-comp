@@ -259,18 +259,30 @@ def cross_org_pubs():
 		else:
 			crossOrg[org_code]['2'][pid]=''
 
+	#create counts of co-organisation publications per organisation
 	orgs_per_org = defaultdict(dict)
+	mean_orgs_per_org_full = defaultdict(dict)
 	for org in crossOrg:
 		for i in crossOrg[org]:
 			if i == '2':
 				for pid in crossOrg[org][i]:
-					print pid
+					#print pid
+					#get number of orgs per pid
+					mean_orgs_per_org_full[org][pid]=len(pubDic[pid])
 					for o in pubDic[pid]:
 						orgs_per_org[org][o]=''
 	#print orgs_per_org
+	mean_orgs_per_org = {}
+	for org in mean_orgs_per_org_full:
+		m = 0
+		for pid in mean_orgs_per_org_full[org]:
+			m+=mean_orgs_per_org_full[org][pid]
+		m = m/len(mean_orgs_per_org_full[org])
+		mean_orgs_per_org[org]=m
+	#print mean_orgs_per_org
 
 	o = open('output/cross_pubs.txt', 'w')
-	o.write('org\tsingle\tmulti\multi_over_single\ttorg_num\torg_num_per_multi\n')
+	o.write('org\tsingle\tmulti\tmulti_over_single\torg_num\torg_num_per_multi\tmean_orgs_per_multi\n')
 	for org in crossOrg:
 		print '### '+orgDic[org]+' ###'
 		o.write(orgDic[org])
@@ -283,18 +295,53 @@ def cross_org_pubs():
 			print i,len(crossOrg[org][i])
 			o.write('\t'+str(len(crossOrg[org][i])))
 		crossNumPerCross=0
-
+		meanCrossNumPerCross=0
 
 		if crossNum>0:
 			crossNumPerCross = len(orgs_per_org[org])/crossNum
-		o.write('\t'+str("%.4f" % crossPerPub)+'\t'+str(len(orgs_per_org[org]))+'\t'+str("%.4f" % crossNumPerCross))
+			meanCrossNumPerCross = mean_orgs_per_org[org]
+		o.write('\t'+str("%.4f" % crossPerPub)+'\t'+str(len(orgs_per_org[org]))+'\t'+str("%.4f" % crossNumPerCross)+'\t'+str("%.4f" % meanCrossNumPerCross))
 		o.write('\n')
 	o.close()
 
+def cross_org_pubs_plot():
+	#plot
+	p = pd.read_csv('output/cross_pubs.txt',sep='\t')
+	p_filter = p.sort_values('multi_over_single',ascending=False)
+	p_filter = p_filter[p_filter['single']>10]
+	#print p
+	#p1 = p_filter[['org','mean_lexical_diversity','mean_content_fraction','mean_num_tokens','mean_num_types']].plot.line(x='org',rot=90,fontsize=5,legend=False,secondary_y=['mean_num_tokens','mean_num_types'])
+	p1 = p_filter[['org','multi_over_single','org_num_per_multi']].plot.bar(x='org',rot=90,fontsize=5)
+	#p2 = p_filter[['org','single','multi','org_num']].plot.bar(x='org',rot=90,secondary_y=['single','multi','org_num'],fontsize=5,ax=p1,legend=False)
+	#move legend
+	#lines, labels = p1.get_legend_handles_labels()
+	#lines2, labels2 = p2.get_legend_handles_labels()
+	#p2.legend(lines + lines2, labels + labels2, loc='upper center',prop={'size':6})
+	#h1, l1 = lines.get_legend_handles_labels()
+	#lines.legend(loc='upper center')
+	#pp.legend(loc='upper center')
+	plt.gcf().subplots_adjust(bottom=0.4)
+	fig = p1.get_figure()
+	fig.savefig('output/cross_pubs.pdf')
 
+	p_filter = p.sort_values('single',ascending=False)
+	p_filter = p_filter[p_filter['single']>50]
+	p1 = p_filter[['single','multi','org_num']].plot.scatter(x='single',y='multi',s=p_filter['org_num']*2)
+	fig = p1.get_figure()
+	fig.savefig('output/cross_pubs2.pdf')
 
+	p2 = p_filter[['multi_over_single','org_num']].plot.scatter(title='Proportion of multiple organisation publications against number of organisations',y='multi_over_single',x='org_num',s=(p_filter['multi']+p_filter['single'])/10)
+	fig = p2.get_figure()
+	fig.savefig('output/cross_pubs3.pdf')
+
+	p_filter = p.sort_values('mean_orgs_per_multi',ascending=False)
+	p_filter = p_filter[p_filter['single']>50]
+	p3 = p_filter[['org','mean_orgs_per_multi']].plot.bar(x='org',rot=90,fontsize=5)
+	fig = p3.get_figure()
+	fig.savefig('output/cross_pubs4.pdf')
 
 #count_things()
 #visualise()
 #staff_per_org()
-cross_org_pubs()
+#cross_org_pubs()
+cross_org_pubs_plot()
