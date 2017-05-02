@@ -6,7 +6,7 @@ from csv import reader
 from neo4j.v1 import GraphDatabase,basic_auth
 auth_token = basic_auth(config.user, config.password)
 driver = GraphDatabase.driver("bolt://"+config.server+":"+config.port,auth=auth_token)
-session = driver.session()
+#session = driver.session()
 
 def neo4j_check():
 	try:
@@ -32,6 +32,7 @@ def string_format(line):
 	return line
 
 def load_org():
+	session = connect
 	#org key
 	#ORGANISATION_CODE,ORGANISATION_TYPE,FULL_NAME,SHORT_NAME,URL
 	orgDic = {}
@@ -61,6 +62,7 @@ def load_org():
 			session.run(com)
 
 def load_staff():
+	session = connect
 	#PERSON_ID,PUBLISHED_NAME,FORENAME,SURNAME,ORGANISATION_CODE,TYPE,JOB_TITLE,START_DATE,END_DATE
 	staffDic = {}
 	with open('data/staff.csv', 'rb') as a:
@@ -81,6 +83,7 @@ def load_staff():
 	session.run(i)
 
 def load_outputs():
+	session = connect
 	#PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT
 	pubDic = {}
 	with open('data/outputs.csv', 'rb') as a:
@@ -105,6 +108,7 @@ def load_outputs():
 	session.run(i)
 
 def load_authors():
+	session = connect
 	#PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME
 	with open('data/authors.csv', 'rb') as a:
 		next(a)
@@ -115,10 +119,11 @@ def load_authors():
 			session.run(com)
 
 def load_data():
+	print 'Loading data'
 	#load_org()
 	#load_staff()
 	#load_outputs()
-	load_authors()
+	#load_authors()
 
 #if __name__ == '__main__':
 
