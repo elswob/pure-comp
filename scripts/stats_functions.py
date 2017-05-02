@@ -2,6 +2,14 @@ from scipy import stats
 import statsmodels.sandbox.stats.multicomp as sm
 import neo4j_functions
 
+def pubs_per_org():
+	session = neo4j_functions.connect()
+	com = 'match (o:Org)--(s:Staff)--(p:Publication) return o.code as o,count(distinct(p)) as c;'
+	oDic = {}
+	for res in session.run(com):
+		oDic[res['o']] = res['c']
+	return oDic
+
 def pubs_per_person():
 	session = neo4j_functions.connect()
 	com = 'match (s:Staff)--(p:Publication) return s.person_id as p,count(p) as c;'
@@ -30,7 +38,7 @@ def fet(a1,a2,b1,b2):
 		#logger.debug("something is wrong with this FET:",a1,a2,b1,b2)
 		return(0,1)
 
-def multiple_test_correction(fet_dict,name):
+def multiple_test_correction(fet_dict):
 	#do correction for multiple testing (pvalue is the 5th element in array)
 	v=[item[5] for item in fet_dict.values()]
 	if len(v)>0:
@@ -46,10 +54,10 @@ def multiple_test_correction(fet_dict,name):
 		filter_fet_dict = {}
 		for res in fet_dict:
 			#logger.debug(res+" : "+str(fet_dict[res]))
-			if float(fet_dict[res][6]) < cor_pval:
+			if float(fet_dict[res][6]) < 1e-5:
 				filter_fet_dict[res] = fet_dict[res]
 
-		print "Finished FET"
+		#print "Finished FET"
 	else:
 		filter_fet_dict = {}
 	#logger.debug(filter_fet_dict)
