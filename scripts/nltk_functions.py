@@ -41,6 +41,10 @@ def filter_stopwords_and_length(text,wordLength):
 	text_no_short_and_no_stopwords = [w for w in text if len(w)>wordLength and w.lower() not in stopwords]
 	return text_no_short_and_no_stopwords
 
+def lexical_diversity(text):
+	text = word_tokenize(text.lower())
+	return len(set(text)) / len(text)
+
 def get_types(text):
 	#lemmatize
 	#text = wordnet_lemmatizer.lemmatize(text)
@@ -112,19 +116,21 @@ def tokenize_and_stem(text):
 	return stems
 
 def tokenise_and_lemm(text):
+	text = text.lower()
 	tokens = [word for sent in nltk.sent_tokenize(text) for word in nltk.word_tokenize(sent)]
 	tokens = filter_stopwords_and_length(tokens,2)
 	tokens = nltk.pos_tag(tokens)
 	lemmatizer = nltk.stem.WordNetLemmatizer()
 	words = []
 	for token in tokens:
-		pos = wordnet_pos_code(token[1])
-		# lemmatize nouns, verbs, adjectives and adverbs
-		if pos is not None:
-			#words.append({'word':lemmatizer.lemmatize(tagged_word[0], pos=pos), 'pos':tagged_word[1]})
-			words.append(lemmatizer.lemmatize(token[0],pos=pos))
-		else:
-			words.append(token[0])
+		if re.search('[a-zA-Z]', token[0]):
+			pos = wordnet_pos_code(token[1])
+			# lemmatize nouns, verbs, adjectives and adverbs
+			if pos is not None:
+				#words.append({'word':lemmatizer.lemmatize(tagged_word[0], pos=pos), 'pos':tagged_word[1]})
+				words.append(lemmatizer.lemmatize(token[0],pos=pos))
+			else:
+				words.append(token[0])
 	#print words
 	return words
 
