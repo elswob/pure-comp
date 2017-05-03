@@ -152,10 +152,36 @@ def run_textstat(text):
 
 def bigrams_and_trigrams(text):
 	aToken = word_tokenize(text.lower())
+
+	#bigrams
 	bigram_measures = nltk.collocations.BigramAssocMeasures()
-	trigram_measures = nltk.collocations.TrigramAssocMeasures()
 	bigrams = BigramCollocationFinder.from_words(aToken)
+	#freqs
+	bigrams_freqs = sorted(bigrams.ngram_fd.items(), key=lambda t: (-t[1], t[0]))[:10]
+	#print bigrams_freqs
+	#all
+	all_bigrams = bigrams.nbest(bigram_measures.pmi, -1)
+	#above min score
+	if len(tuple(nltk.bigrams(aToken)))>0:
+		sorted_bigrams = sorted(bigrams.above_score(bigram_measures.raw_freq,1.0 / len(tuple(nltk.bigrams(aToken)))))
+		#print sorted_bigrams
+	else:
+		sorted_bigrams = ()
+
+	#trigrams
+	trigram_measures = nltk.collocations.TrigramAssocMeasures()
 	trigrams = TrigramCollocationFinder.from_words(aToken)
-	return bigrams,trigrams
+	#freqs
+	trigrams_freqs = sorted(trigrams.ngram_fd.items(), key=lambda t: (-t[1], t[0]))[:10]
+	#print trigrams_freqs
+	#all
+	all_trigrams = trigrams.nbest(trigram_measures.pmi, -1)
+	#above min score
+	if len(tuple(nltk.trigrams(aToken)))>0:
+		sorted_trigrams = sorted(trigrams.above_score(trigram_measures.raw_freq,1.0 / len(tuple(nltk.trigrams(aToken)))))
+		#print sorted_trigrams
+	else:
+		sorted_trigrams = ()
+	return all_bigrams,all_trigrams
 
 #run_textstat()
