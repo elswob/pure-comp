@@ -104,7 +104,7 @@ def load_outputs():
 				session.run(com)
 			pubDic[PUBLICATION_ID]=''
 
-	i="CREATE index on :Publicatopn(pub_id);"
+	i="CREATE index on :Publication(pub_id);"
 	session.run(i)
 
 def load_authors():
@@ -117,6 +117,10 @@ def load_authors():
 			com = "MATCH (s:Staff {person_id:"+person+"}) , (p:Publication {pub_id:"+publication+"}) merge (s)-[:PUBLISHED]-(p);"
 			print com
 			session.run(com)
+
+def load_enriched(com,type):
+	print "Loading enriched data"
+
 
 def load_data():
 	print 'Loading data'

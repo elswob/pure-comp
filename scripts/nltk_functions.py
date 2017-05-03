@@ -150,5 +150,12 @@ def run_textstat(text):
 
 	return(ts_flesch_reading_ease,ts_smog_index,ts_flesch_kincaid_grade,ts_coleman_liau_index,ts_automated_readability_index,ts_dale_chall_readability_score,ts_difficult_words,ts_linsear_write_formula,ts_gunning_fog,ts_text_standard)
 
+def bigrams_and_trigrams(text):
+	aToken = word_tokenize(text.lower())
+	bigram_measures = nltk.collocations.BigramAssocMeasures()
+	trigram_measures = nltk.collocations.TrigramAssocMeasures()
+	bigrams = BigramCollocationFinder.from_words(aToken)
+	trigrams = TrigramCollocationFinder.from_words(aToken)
+	return bigrams,trigrams
 
 #run_textstat()

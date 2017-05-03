@@ -5,10 +5,16 @@ from collections import defaultdict
 def background_frequencies():
 	print "Getting background frequencies"
 	session = neo4j_functions.connect()
-	o = open('output/background_type_frequencies.txt', 'w')
-	o.write('type\tcount\n')
+	o1 = open('output/background_type_frequencies.txt', 'w')
+	o1.write('type\tcount\n')
+	o2 = open('output/background_bigram_frequencies.txt', 'w')
+	o2.write('type\tcount\n')
+	o3 = open('output/background_trigram_frequencies.txt', 'w')
+	o3.write('type\tcount\n')
 	com = "match (s:Staff)--(p:Publication) return distinct p.abstract as a, p.title as t, p.pub_id as pid;"
-	backgroundDic = {}
+	backgroundTypeDic = {}
+	backgroundBigramDic = {}
+	backgroundTrigramDic = {}
 	counter=0
 	for res in session.run(com):
 		if counter % 1000 == 0:
@@ -16,16 +22,38 @@ def background_frequencies():
 		counter+=1
 		abs = res['a']
 		#print res['pid']
-		types = set(nltk_functions.tokenise_and_lemm(abs))
-		for s in types:
-			if s in backgroundDic:
-				backgroundDic[s]+=1
+		types = nltk_functions.tokenise_and_lemm(abs)
+		bigrams,trigrams = nltk_functions.bigrams_and_trigrams(" ".join(types))
+		for s in set(types):
+			if s in backgroundTypeDic:
+				backgroundTypeDic[s]+=1
 			else:
-				backgroundDic[s] = 1
-	for t in sorted(backgroundDic, key=backgroundDic.get, reverse=True):
-		o.write(t+'\t'+str(backgroundDic[t])+'\n')
-	b_sorted = sorted(backgroundDic.items(), key=operator.itemgetter(1),reverse=True)
+				backgroundTypeDic[s] = 1
+		for b in set(bigrams):
+			if s in backgroundBigramDic:
+				backgroundBigramDic[s]+=1
+			else:
+				backgroundBigramDic[s] = 1
+		for b in set(trigrams):
+			if s in backgroundTrigramDic:
+				backgroundTrigramDic[s]+=1
+			else:
+				backgroundTrigramDic[s] = 1
+	for t in sorted(backgroundTypeDic, key=backgroundTypeDic.get, reverse=True):
+		o1.write(t+'\t'+str(backgroundTypeDic[t])+'\n')
+	b_sorted = sorted(backgroundTypeDic.items(), key=operator.itemgetter(1),reverse=True)
 	print len(b_sorted),list(b_sorted)[:10]
+
+	for t in sorted(backgroundBigramDic, key=backgroundBigramDic.get, reverse=True):
+		o2.write(t+'\t'+str(backgroundBigramDic[t])+'\n')
+	b_sorted = sorted(backgroundBigramDic.items(), key=operator.itemgetter(1),reverse=True)
+	print len(b_sorted),list(b_sorted)[:10]
+
+	for t in sorted(backgroundTrigramDic, key=backgroundTrigramDic.get, reverse=True):
+		o3.write(t+'\t'+str(backgroundTypeDic[t])+'\n')
+	b_sorted = sorted(backgroundTrigramDic.items(), key=operator.itemgetter(1),reverse=True)
+	print len(b_sorted),list(b_sorted)[:10]
+
 	session.close()
 
 def person_frequencies():
@@ -136,7 +164,7 @@ def enrich_person():
 		for t in e_cor[p]:
 			#print t
 			a1,a2,b1,b2,odds,pval,cor_pval = e_cor[p][t]
-			o.write(p+'\t'+t+'\t'+'\t'+'\t'+str(a1)+'\t'+str(a2)+'\t'+str(b1)+'\t'+str(b2)+'\t'+str("%.4f" % odds)+'\t'+str("%03.02e" % pval)+'\t'+str("%03.02e" % cor_pval)+'\n')
+			o.write(p+'\t'+t+'\t'+str(a1)+'\t'+str(a2)+'\t'+str(b1)+'\t'+str(b2)+'\t'+str("%.4f" % odds)+'\t'+str("%03.02e" % pval)+'\t'+str("%03.02e" % cor_pval)+'\n')
 	o.close()
 
 def enrich_orgs():
@@ -194,8 +222,77 @@ def enrich_orgs():
 		for t in e_cor[p]:
 			#print t
 			a1,a2,b1,b2,odds,pval,cor_pval = e_cor[p][t]
-			o.write(p+'\t'+t+'\t'+'\t'+'\t'+str(a1)+'\t'+str(a2)+'\t'+str(b1)+'\t'+str(b2)+'\t'+str("%.4f" % odds)+'\t'+str("%03.02e" % pval)+'\t'+str("%03.02e" % cor_pval)+'\n')
+			o.write(p+'\t'+t+'\t'+str(a1)+'\t'+str(a2)+'\t'+str(b1)+'\t'+str(b2)+'\t'+str("%.4f" % odds)+'\t'+str("%03.02e" % pval)+'\t'+str("%03.02e" % cor_pval)+'\n')
 	o.close()
+
+def add_enriched_to_graph():
+	print "Adding enrichment data to graph..."
+	session = neo4j_functions.connect()
+	counter=0
+	num_lines = sum(1 for line in open('output/person_type_enriched.txt'))
+
+	#create concept nodes and index
+	with open('output/person_type_enriched.txt', 'rb') as p:
+		next(p)
+		for line in p:
+			line = line.rstrip()
+			#print line
+			if counter % 10000 == 0:
+				print str(counter)+'/'+str(num_lines)
+				session.close()
+				session = neo4j_functions.connect()
+			counter+=1
+			name,type,a1,a2,b1,b2,odds,pval,cor_pval = line.split('\t')
+			type = type.replace("'","\\'")
+			person_id = name.split(':')[1]
+			com = "MERGE (c:Concept {name:'"+type+"'})"
+			#session.run(com)
+
+	i="CREATE index on :Concept(name);"
+	session.run(i)
+
+	counter=0
+	#create person-concept relationships
+	print "Creating person-concept relatioships..."
+	with open('output/person_type_enriched.txt', 'rb') as p:
+		next(p)
+		for line in p:
+			line = line.rstrip()
+			#print line
+			if counter % 10000 == 0:
+				print str(counter)+'/'+str(num_lines)
+				session.close()
+				session = neo4j_functions.connect()
+			counter+=1
+			name,type,a1,a2,b1,b2,odds,pval,cor_pval = line.split('\t')
+			type = type.replace("'","\\'")
+			person_id = name.split(':')[1]
+			com = "MATCH (s:Staff {person_id: "+person_id+"}) " \
+				  "MATCH (c:Concept {name:'"+type+"'}) " \
+				  "MERGE (s)-[:ENRICHED{type:'pure-comp',year:2014,localCount:"+str(a1)+"," \
+				  "localTotal:"+str(a2)+",globalCount:"+str(b1)+",globalTotal:"+str(b2)+",cpval:"+str(cor_pval)+"}]-(c);"
+			#session.run(com)
+
+	counter=0
+	#create org-concept relationships
+	print "Creating org-concept relatioships..."
+	with open('output/org_type_enriched.txt', 'rb') as p:
+		next(p)
+		for line in p:
+			if counter % 10000 == 0:
+				print counter
+			counter+=1
+			line = line.rstrip()
+			name,type,a1,a2,b1,b2,odds,pval,cor_pval = line.split('\t')
+			code = name.split(':')[1]
+			com = "MATCH (o:Org {code: '"+code+"'}) " \
+				  "MATCH (c:Concept {name:'"+type+"'}) " \
+				  "MERGE (o)-[:ENRICHED{type:'pure-comp',year:2014,localCount:"+str(a1)+"," \
+				  "localTotal:"+str(a2)+",globalCount:"+str(b1)+",globalTotal:"+str(b2)+",cpval:"+str(cor_pval)+"}]-(c);"
+			print com
+			session.run(com)
+
+	session.close()
 
 if __name__ == '__main__':
 	if os.path.exists('output/background_type_frequencies.txt'):
@@ -210,7 +307,8 @@ if __name__ == '__main__':
 		print 'Org frequencies already created'
 	else:
 		org_frequencies()
-		
+
 	#run enrichment steps
-	enrich_person()
-	enrich_orgs()
+	#enrich_person()
+	#enrich_orgs()
+	add_enriched_to_graph()
