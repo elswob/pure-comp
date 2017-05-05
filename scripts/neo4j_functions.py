@@ -4,8 +4,8 @@ from csv import reader
 
 #neo4j
 from neo4j.v1 import GraphDatabase,basic_auth
-auth_token = basic_auth(config.user, config.password)
-driver = GraphDatabase.driver("bolt://"+config.server+":"+config.port,auth=auth_token)
+auth_token = basic_auth(config.neo4j_user, config.neo4j_password)
+driver = GraphDatabase.driver("bolt://"+config.neo4j_server+":"+config.neo4j_port,auth=auth_token)
 #session = driver.session()
 
 def neo4j_check():
