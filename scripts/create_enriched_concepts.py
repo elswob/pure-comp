@@ -377,6 +377,17 @@ def add_enriched_to_graph():
 	session.run(i)
 	session.close()
 
+def distance_metrics():
+	session = neo4j_functions.connect()
+	#staff
+	com="match (p1:Staff)-[e1:ENRICHED]->(s), (p2:Staff)-[e2:ENRICHED]->(s) where id(p1) < id(p2) with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_2014 = euc;"
+	print com
+	session.run(com)
+	#orgs
+	com="match (p1:Org)-[e1:ENRICHED]->(s), (p2:Org)-[e2:ENRICHED]->(s) where id(p1) < id(p2) with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_2014 = euc;"
+	print com
+	session.run(com)
+
 if __name__ == '__main__':
 	if os.path.exists(outDir+'/background_type_frequencies.txt'):
 		print 'Background frequencies already created'
@@ -392,6 +403,7 @@ if __name__ == '__main__':
 		org_frequencies()
 
 	#run enrichment steps
-	enrich_person()
-	enrich_orgs()
+	#enrich_person()
+	#enrich_orgs()
 	add_enriched_to_graph()
+	distance_metrics()

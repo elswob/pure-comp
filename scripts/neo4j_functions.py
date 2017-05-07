@@ -32,7 +32,7 @@ def string_format(line):
 	return line
 
 def load_org():
-	session = connect
+	session = connect()
 	#org key
 	#ORGANISATION_CODE,ORGANISATION_TYPE,FULL_NAME,SHORT_NAME,URL
 	orgDic = {}
@@ -62,7 +62,7 @@ def load_org():
 			session.run(com)
 
 def load_staff():
-	session = connect
+	session = connect()
 	#PERSON_ID,PUBLISHED_NAME,FORENAME,SURNAME,ORGANISATION_CODE,TYPE,JOB_TITLE,START_DATE,END_DATE
 	staffDic = {}
 	with open('data/staff.csv', 'rb') as a:
@@ -83,7 +83,7 @@ def load_staff():
 	session.run(i)
 
 def load_outputs():
-	session = connect
+	session = connect()
 	#PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT
 	pubDic = {}
 	with open('data/outputs.csv', 'rb') as a:
@@ -108,7 +108,7 @@ def load_outputs():
 	session.run(i)
 
 def load_authors():
-	session = connect
+	session = connect()
 	#PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME
 	with open('data/authors.csv', 'rb') as a:
 		next(a)
@@ -124,11 +124,11 @@ def load_enriched(com,type):
 
 def load_data():
 	print 'Loading data'
-	#load_org()
-	#load_staff()
-	#load_outputs()
-	#load_authors()
+	load_org()
+	load_staff()
+	load_outputs()
+	load_authors()
 
-#if __name__ == '__main__':
-
+if __name__ == '__main__':
+	load_data()
 
