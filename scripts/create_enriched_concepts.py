@@ -419,10 +419,12 @@ def add_pub_concepts():
 		counter+=1
 		name = res['n']
 		type = res['t']
-		for p in pubConceptDic[name+":"+type]:
-			com = "match (p:Publication {pub_id:"+str(p)+"}) match (c:Concept {name:'"+name+"',type:'"+type+"'}) merge (p)-[:CONCEPT]-(c);"
+		cName = name+":"+type
+		print len(pubConceptDic[cName]),cName
+		#for p in pubConceptDic[cName]:
+			#com = "match (p:Publication {pub_id:"+str(p)+"}) match (c:Concept {name:'"+name+"',type:'"+type+"'}) merge (p)-[:CONCEPT]-(c);"
 			#print com
-			session.run(com)
+			#session.run(com)
 
 def distance_metrics():
 	session = neo4j_functions.connect()
