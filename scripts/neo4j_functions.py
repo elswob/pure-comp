@@ -71,10 +71,10 @@ def load_staff():
 			line = string_format(line)
 			person_id,published_name,forename,surname,organisation_code,type,job_title,start_date,end_date = line
 			if person_id not in staffDic:
-				com = "MERGE (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
+				com = "MATCH (o:Org {code:'"+organisation_code+"'}) MERGE (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
 				"forename: '"+forename+"',surname: '"+surname+"',organisation_code:'"+organisation_code+"'," \
 				"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'}) " \
-				"MATCH (o:Org {code:'"+organisation_code+"'}) MERGE (s)-[:MEMBER_OF]-(o);"
+				"MERGE (s)-[:MEMBER_OF]-(o);"
 				print com
 				session.run(com)
 			staffDic[person_id]=''
