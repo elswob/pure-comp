@@ -7,7 +7,8 @@ outDir='concepts/'
 def ignore_tokens():
 	#cat output/background_type_frequencies.txt | grep '/' | head -n 20 | cut -f1 | tr '\n' ','
 	l = ['/00a9','br/','/sub','/sup','/00b1','/00d7','/03bcm','/00b0c','/03b2','/em','a/03b2','/03b1','.','ltd.','elsevier','inc.']
-	return l
+	frequent = ['use','available']
+	return l+frequent
 
 def background_frequencies():
 	print "Getting background frequencies"
@@ -18,10 +19,12 @@ def background_frequencies():
 	o2.write('bigram\tcount\n')
 	o3 = open(outDir+'/background_trigram_frequencies.txt', 'w')
 	o3.write('trigram\tcount\n')
+	o4 = open(outDir+'/pub_concept.txt','w')
 	com = "match (s:Staff)--(p:Publication) return distinct p.abstract as a, p.title as t, p.pub_id as pid;"
 	typeDic = {}
 	bigramDic = {}
 	trigramDic = {}
+	pubConceptDic = defaultdict(dict)
 	counter=0
 	ignoreList = ignore_tokens()
 	for res in session.run(com):
@@ -29,6 +32,7 @@ def background_frequencies():
 			print counter
 		counter+=1
 		abs = res['a']
+		pid = res['pid']
 		types = nltk_functions.tokenise_and_lemm(abs)
 		#bigrams,trigrams = nltk_functions.bigrams_and_trigrams(abs)
 		bigrams,trigrams = nltk_functions.bigrams_and_trigrams(" ".join(types))
@@ -36,6 +40,8 @@ def background_frequencies():
 			if s in ignoreList:
 				pass
 			else:
+				#add to pub-concept dic
+				pubConceptDic[pid][s]='type'
 				if s in typeDic:
 					typeDic[s]+=1
 				else:
@@ -43,6 +49,8 @@ def background_frequencies():
 		for s in set(bigrams):
 			if len(set(s).intersection(ignoreList))==0:
 				ss = s[0]+':'+s[1]
+				#add to pub-concept dic
+				pubConceptDic[pid][ss]='bigram'
 				if ss in bigramDic:
 					bigramDic[ss]+=1
 				else:
@@ -50,6 +58,8 @@ def background_frequencies():
 		for s in set(trigrams):
 			if len(set(s).intersection(ignoreList))==0:
 				ss = s[0]+':'+s[1]+':'+s[2]
+				#add to pub-concept dic
+				pubConceptDic[pid][ss]='trigram'
 				if ss in trigramDic:
 					trigramDic[ss]+=1
 				else:
@@ -62,6 +72,14 @@ def background_frequencies():
 	for t in sorted(trigramDic, key=trigramDic.get, reverse=True):
 		o3.write(t+'\t'+str(trigramDic[t])+'\n')
 
+	l = len(pubConceptDic)
+	counter=0
+	for p in pubConceptDic:
+		if counter % 1000 == 0:
+			print counter,l
+		counter+=1
+		for c in pubConceptDic[p]:
+			o4.write(str(p)+'\t'+c+"\t"+pubConceptDic[p][c]+'\n')
 	session.close()
 
 def person_frequencies():
@@ -73,6 +91,7 @@ def person_frequencies():
 	o2.write('person\tbigram\tcount\n')
 	o3 = open(outDir+'/person_trigram_frequencies.txt', 'w')
 	o3.write('person\ttrigram\tcount\n')
+
 	com = "match (s:Staff)--(p:Publication) return distinct s.published_name as p1, s.person_id as p2, p.abstract as a, p.title as t, p.pub_id as pid;"
 	typeDic = defaultdict(dict)
 	bigramDic = defaultdict(dict)
@@ -379,6 +398,32 @@ def add_enriched_to_graph():
 	session.run(i)
 	session.close()
 
+def add_pub_concepts():
+	print "Adding pub-concept data"
+	#read data
+	pubConceptDic = defaultdict(dict)
+	with open(outDir+'/pub_concept.txt', 'rb') as p:
+		for line in p:
+			line = line.rstrip()
+			pid,name,type = line.split('\t')
+			pubConceptDic[name+":"+type][pid]=''
+
+	session = neo4j_functions.connect()
+	com = "match (c:Concept) return c.name as n, c.type as t;"
+	counter=0
+	for res in session.run(com):
+		if counter % 10000 == 0:
+			print counter
+			session.close()
+			session = neo4j_functions.connect()
+		counter+=1
+		name = res['n']
+		type = res['t']
+		for p in pubConceptDic[name+":"+type]:
+			com = "match (p:Publication {pub_id:"+str(p)+"}) match (c:Concept {name:'"+name+"',type:'"+type+"'}) merge (p)-[:CONCEPT]-(c);"
+			#print com
+			session.run(com)
+
 def distance_metrics():
 	session = neo4j_functions.connect()
 	#staff
@@ -407,5 +452,6 @@ if __name__ == '__main__':
 	#run enrichment steps
 	#enrich_person()
 	#enrich_orgs()
-	add_enriched_to_graph()
-	distance_metrics()
+	#add_enriched_to_graph()
+	add_pub_concepts()
+	#distance_metrics()
