@@ -74,7 +74,7 @@ def load_staff():
 				com = "MERGE (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
 				"forename: '"+forename+"',surname: '"+surname+"',organisation_code:'"+organisation_code+"'," \
 				"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'}) " \
-				"MERGE (o:Org {code:'"+organisation_code+"'}) MERGE (s)-[:MEMBER_OF]-(o);"
+				"MATCH (o:Org {code:'"+organisation_code+"'}) MERGE (s)-[:MEMBER_OF]-(o);"
 				print com
 				session.run(com)
 			staffDic[person_id]=''

@@ -321,6 +321,8 @@ def add_enriched_to_graph():
 
 		i="CREATE index on :Concept(name);"
 		session.run(i)
+		i="CREATE index on :Concept(type);"
+		session.run(i)
 
 		counter=0
 		#create person-concept relationships
