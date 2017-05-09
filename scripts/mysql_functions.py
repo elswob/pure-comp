@@ -22,6 +22,7 @@ def copy_graph_to_mysql():
 
 	#person table
 	#name,user_name,institute,position,sex
+	print "Adding people"
 	neo4j_com = "match (o:Org)--(s:Staff) return s.published_name as n, s.person_id as pid, o.short_name as s;"
 	mysql_com = ("INSERT IGNORE INTO browser_person (name, user_name, institute, position, sex) " "VALUES (%s, %s, %s, %s, %s)")
 	for res in session.run(neo4j_com):
@@ -38,16 +39,18 @@ def copy_graph_to_mysql():
 
 	#concepts
 	#name,type
+	print "Adding concepts"
 	neo4j_com = "match (c:Concept) return c.name as n, c.type as t"
 	mysql_com = ("INSERT IGNORE INTO browser_concept (name, type) " "VALUES (%s, %s)")
 	for res in session.run(neo4j_com):
 		name = res['n']
 		#print name
 		type = res['t']
-		#curA.execute(mysql_com, (name, type))
+		curA.execute(mysql_com, (name, type))
 
 	#enrichments
 	#person_id,globalCount,cpval,concept_id,globalTotal,localCount,localTotal,year
+	print "Adding people-concepts"
 	neo4j_com = "match (s:Staff)-[e]-(c:Concept) return s.person_id as pid,c.name, e.localCount,e.localTotal,e.globalCount,e.globalTotal,e.year,e.cpval;"
 	mysql_com = ("INSERT IGNORE INTO browser_enriched (person_id,concept_id,localCount,localTotal,globalCount,globalTotal,year,cpval) "
 				 "VALUES ((SELECT id from browser_person where user_name = %s), (SELECT id from browser_concept where name = %s), %s, %s, %s, %s, %s, %s )")
@@ -60,7 +63,7 @@ def copy_graph_to_mysql():
 		globalTotal = res['e.globalTotal']
 		year = res['e.year']
 		cpval = res['e.cpval']
-		print pid,cName
+		#print pid,cName
 		curA.execute(mysql_com, (pid,cName,localCount,localTotal,globalCount,globalTotal,year,cpval))
 
 	cnx.close()

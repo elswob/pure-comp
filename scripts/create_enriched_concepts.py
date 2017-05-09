@@ -4,11 +4,13 @@ from collections import defaultdict
 
 outDir='concepts/'
 
+freqCutoff=1000
+
 def ignore_tokens():
 	#cat output/background_type_frequencies.txt | grep '/' | head -n 20 | cut -f1 | tr '\n' ','
 	l = ['/00a9','br/','/sub','/sup','/00b1','/00d7','/03bcm','/00b0c','/03b2','/em','a/03b2','/03b1','.','ltd.','elsevier','inc.']
-	frequent = ['use','available']
-	return l+frequent
+	other = ['one','two','three','four','five','six','seven','eight','nine','ten']
+	return l
 
 def background_frequencies():
 	print "Getting background frequencies"
@@ -19,7 +21,7 @@ def background_frequencies():
 	o2.write('bigram\tcount\n')
 	o3 = open(outDir+'/background_trigram_frequencies.txt', 'w')
 	o3.write('trigram\tcount\n')
-	o4 = open(outDir+'/pub_concept.txt','w')
+
 	com = "match (s:Staff)--(p:Publication) return distinct p.abstract as a, p.title as t, p.pub_id as pid;"
 	typeDic = {}
 	bigramDic = {}
@@ -72,6 +74,7 @@ def background_frequencies():
 	for t in sorted(trigramDic, key=trigramDic.get, reverse=True):
 		o3.write(t+'\t'+str(trigramDic[t])+'\n')
 
+	o4 = open(outDir+'/pub_concept.txt','w')
 	l = len(pubConceptDic)
 	counter=0
 	for p in pubConceptDic:
@@ -80,7 +83,31 @@ def background_frequencies():
 		counter+=1
 		for c in pubConceptDic[p]:
 			o4.write(str(p)+'\t'+c+"\t"+pubConceptDic[p][c]+'\n')
+
 	session.close()
+
+def typeFreqs():
+	#read in type freqs for filtering
+	typeDic = {}
+	with open(outDir+'/background_type_frequencies.txt', 'rb') as a:
+		next(a)
+		for line in a:
+			line = line.rstrip()
+			t,c = line.split('\t')
+			typeDic[t]=c
+	return typeDic
+
+def readPubConcepts():
+	print "Recreating pubConcept dictionary..."
+	pubConceptDic = defaultdict(dict)
+	with open(outDir+'/pub_concept.txt', 'rb') as a:
+		for line in a:
+			line = line.rstrip()
+			pid,concept,type = line.split('\t')
+			pubConceptDic[pid][concept]=type
+	firstpair = {k: pubConceptDic[k] for k in pubConceptDic.keys()[:1]}
+	#print firstpair
+	return pubConceptDic
 
 def person_frequencies():
 	print "Getting person frequencies"
@@ -92,45 +119,49 @@ def person_frequencies():
 	o3 = open(outDir+'/person_trigram_frequencies.txt', 'w')
 	o3.write('person\ttrigram\tcount\n')
 
-	com = "match (s:Staff)--(p:Publication) return distinct s.published_name as p1, s.person_id as p2, p.abstract as a, p.title as t, p.pub_id as pid;"
+	#com = "match (s:Staff)--(p:Publication) where p.pub_id = 2942913 return distinct s.published_name as p1, s.person_id as p2, p.pub_id as pid;"
+	com = "match (s:Staff)--(p:Publication) return distinct s.published_name as p1, s.person_id as p2, p.pub_id as pid;"
 	typeDic = defaultdict(dict)
 	bigramDic = defaultdict(dict)
 	trigramDic = defaultdict(dict)
 	ignoreList = ignore_tokens()
 	counter=0
+	#read in type freqs for filtering
+	typeConceptDic = typeFreqs()
+	#get pubConceptDic
+	pubConceptDic = readPubConcepts()
 	for res in session.run(com):
 		if counter % 1000 == 0:
 			print counter
 		counter+=1
-		abs = res['a']
 		person_name = res['p1']
 		person_id = res['p2']
+		pid = str(res['pid'])
 		person = person_name+':'+str(person_id)
 		#print res['pid']
-		types = nltk_functions.tokenise_and_lemm(abs)
-		bigrams,trigrams = nltk_functions.bigrams_and_trigrams(" ".join(types))
-		for s in set(types):
+		for s in pubConceptDic[pid]:
 			if s in ignoreList:
 				pass
 			else:
-				if s in typeDic[person]:
-					typeDic[person][s]+=1
-				else:
-					typeDic[person][s] = 1
-		for s in set(bigrams):
-			if len(set(s).intersection(ignoreList))==0:
-				ss = s[0]+':'+s[1]
-				if ss in bigramDic[person]:
-					bigramDic[person][ss]+=1
-				else:
-					bigramDic[person][ss] = 1
-		for s in set(trigrams):
-			if len(set(s).intersection(ignoreList))==0:
-				ss = s[0]+':'+s[1]+':'+s[2]
-				if ss in trigramDic[person]:
-					trigramDic[person][ss]+=1
-				else:
-					trigramDic[person][ss] = 1
+				if pubConceptDic[pid][s] == 'type':
+					if int(typeConceptDic[s])>freqCutoff:
+						#print pid,s,pubConceptDic[pid][s],typeConceptDic[s]
+						pass
+					else:
+						if s in typeDic[person]:
+							typeDic[person][s]+=1
+						else:
+							typeDic[person][s] = 1
+				elif pubConceptDic[pid][s] == 'bigram':
+					if s in bigramDic[person]:
+						bigramDic[person][s]+=1
+					else:
+						bigramDic[person][s] = 1
+				elif pubConceptDic[pid][s] == 'trigram':
+					if s in trigramDic[person]:
+						trigramDic[person][s]+=1
+					else:
+						trigramDic[person][s] = 1
 
 	for p in sorted(typeDic, key=typeDic.get, reverse=True):
 		for t in sorted(typeDic[p], key=typeDic[p].get, reverse=True):
@@ -153,42 +184,45 @@ def org_frequencies():
 	o2.write('org\tbigram\tcount\n')
 	o3 = open(outDir+'/org_trigram_frequencies.txt', 'w')
 	o3.write('org\ttrigram\tcount\n')
-	com = "match (o:Org)--(s:Staff)--(p:Publication) return distinct o.short_name as o1, o.code as o2, p.abstract as a, p.title as t, p.pub_id as pid;"
+	com = "match (o:Org)--(s:Staff)--(p:Publication) return distinct o.short_name as o1, o.code as o2, p.pub_id as pid;"
 	typeDic = defaultdict(dict)
 	bigramDic = defaultdict(dict)
 	trigramDic = defaultdict(dict)
 	counter=0
 	ignoreList = ignore_tokens()
+	#read in type freqs for filtering
+	typeConceptDic = typeFreqs()
+	#get pubConceptDic
+	pubConceptDic = readPubConcepts()
 	for res in session.run(com):
 		if counter % 1000 == 0:
 			print counter
 		counter+=1
-		abs = res['a']
 		org = res['o1']+':'+res['o2']
-		types = nltk_functions.tokenise_and_lemm(abs)
-		bigrams,trigrams = nltk_functions.bigrams_and_trigrams(" ".join(types))
-		for s in set(types):
+		pid = str(res['pid'])
+		for s in pubConceptDic[pid]:
 			if s in ignoreList:
 				pass
 			else:
-				if s in typeDic[org]:
-					typeDic[org][s]+=1
-				else:
-					typeDic[org][s] = 1
-		for s in set(bigrams):
-			if len(set(s).intersection(ignoreList))==0:
-				ss = s[0]+':'+s[1]
-				if ss in bigramDic[org]:
-					bigramDic[org][ss]+=1
-				else:
-					bigramDic[org][ss] = 1
-		for s in set(trigrams):
-			if len(set(s).intersection(ignoreList))==0:
-				ss = s[0]+':'+s[1]+':'+s[2]
-				if ss in trigramDic[org]:
-					trigramDic[org][ss]+=1
-				else:
-					trigramDic[org][ss] = 1
+				if pubConceptDic[pid][s] == 'type':
+					if int(typeConceptDic[s])>freqCutoff:
+						#print pid,s,pubConceptDic[pid][s],typeConceptDic[s]
+						pass
+					else:
+						if s in typeDic[org]:
+							typeDic[org][s]+=1
+						else:
+							typeDic[org][s] = 1
+				elif pubConceptDic[pid][s] == 'bigram':
+					if s in bigramDic[org]:
+						bigramDic[org][s]+=1
+					else:
+						bigramDic[org][s] = 1
+				elif pubConceptDic[pid][s] == 'trigram':
+					if s in trigramDic[org]:
+						trigramDic[org][s]+=1
+					else:
+						trigramDic[org][s] = 1
 
 	for p in sorted(typeDic, key=typeDic.get, reverse=True):
 		for t in sorted(typeDic[p], key=typeDic[p].get, reverse=True):
@@ -340,8 +374,8 @@ def add_enriched_to_graph():
 
 		i="CREATE index on :Concept(name);"
 		session.run(i)
-		i="CREATE index on :Concept(type);"
-		session.run(i)
+		#i="CREATE index on :Concept(type);"
+		#session.run(i)
 
 		counter=0
 		#create person-concept relationships
@@ -420,11 +454,11 @@ def add_pub_concepts():
 		name = res['n']
 		type = res['t']
 		cName = name+":"+type
-		print len(pubConceptDic[cName]),cName
-		#for p in pubConceptDic[cName]:
-			#com = "match (p:Publication {pub_id:"+str(p)+"}) match (c:Concept {name:'"+name+"',type:'"+type+"'}) merge (p)-[:CONCEPT]-(c);"
+		#print len(pubConceptDic[cName]),cName
+		for p in pubConceptDic[cName]:
+			com = "match (p:Publication {pub_id:"+str(p)+"}) match (c:Concept {name:'"+name+"',type:'"+type+"'}) merge (p)-[:CONCEPT]-(c);"
 			#print com
-			#session.run(com)
+			session.run(com)
 
 def distance_metrics():
 	session = neo4j_functions.connect()
@@ -452,8 +486,8 @@ if __name__ == '__main__':
 		org_frequencies()
 
 	#run enrichment steps
-	#enrich_person()
+#	#enrich_person()
 	#enrich_orgs()
 	#add_enriched_to_graph()
 	add_pub_concepts()
-	#distance_metrics()
+	distance_metrics()
