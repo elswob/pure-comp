@@ -428,8 +428,6 @@ def add_enriched_to_graph():
 					  "localTotal:"+str(a2)+",globalCount:"+str(b1)+",globalTotal:"+str(b2)+",cpval:"+str(cor_pval)+"}]-(c);"
 				#print com
 				session.run(com)
-	i="CREATE index on :Concept(type);"
-	session.run(i)
 	session.close()
 
 def add_pub_concepts():
@@ -446,12 +444,13 @@ def add_pub_concepts():
 	com = "match (c:Concept) return c.name as n, c.type as t;"
 	counter=0
 	for res in session.run(com):
-		if counter % 10000 == 0:
+		if counter % 1000 == 0:
 			print counter
 			session.close()
 			session = neo4j_functions.connect()
 		counter+=1
 		name = res['n']
+		name = name.replace("'", "\\'")
 		type = res['t']
 		cName = name+":"+type
 		#print len(pubConceptDic[cName]),cName
