@@ -1,6 +1,9 @@
 import requests, os, json
 import xmltodict
 from csv import reader
+from difflib import SequenceMatcher
+import difflib
+import itertools
 
 dataDir = '/Users/be15516/projects/pure-comp/data'
 
@@ -115,14 +118,50 @@ def parse_json(pub_dic):
 		else:
 			print i+ ".json has no DOI"
 
+def similar(a, b):
+	return SequenceMatcher(None, a, b).ratio()
+
+def find_similar():
+	print "Finding similar text"
+	#pDic = {}
+	pList = []
+	with open('data/outputs_1000.csv', 'rb') as a:
+		next(a)
+		for line in reader(a, delimiter=','):
+			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
+			if len(TITLE)>10:
+				# pDic[PUBLICATION_ID]=TITLE
+				pList.append(TITLE)
+	# counter=0
+	# for i in pDic:
+	# 	if counter % 100 == 0:
+	# 		print counter,len(pDic)
+	# 	counter+=1
+	# 	for j in pDic:
+	# 		if i != j:
+	# 			s = similar(pDic[i],pDic[j])
+	# 			if s > 0.8:
+	# 				print i,j,s
+
+	threshold_ratio = 0.75
+	counter=0
+	for str_1, str_2 in itertools.combinations(pList, 2):
+		if counter % 1000 == 0:
+			print counter,len(pList)
+		counter+=1
+		ratio = difflib.SequenceMatcher(None, str_1, str_2).ratio()
+		if (ratio > threshold_ratio):
+			print '%f\t%s\t\t could be \t\t%s' % (ratio, str_1, str_2)
+
 def main():
 	#check_data()
-	filter_people()
-	filter_authors()
-	filter_output()
-	pub_dic = get_xml()
-	create_json(pub_dic)
-	parse_json(pub_dic)
+	#filter_people()
+	#filter_authors()
+	#filter_output()
+	#pub_dic = get_xml()
+	#create_json(pub_dic)
+	#parse_json(pub_dic)
+	find_similar()
 
 if __name__ == '__main__':
 	main()
