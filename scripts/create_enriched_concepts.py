@@ -1,10 +1,11 @@
-import nltk_functions, neo4j_functions, stats_functions
+import nltk_functions, neo4j_functions, stats_functions, config
 import operator,os
 from collections import defaultdict
 
 outDir='concepts/'
 
 freqCutoff=1000
+minAbsLength = config.minAbsLength
 
 def ignore_tokens():
 	#cat output/background_type_frequencies.txt | grep '/' | head -n 20 | cut -f1 | tr '\n' ','
@@ -33,41 +34,42 @@ def background_frequencies():
 		if counter % 1000 == 0:
 			print counter
 		counter+=1
-		#combine title and abstract
-		title_abs = res['t']+res['a']
-		#abs = res['a']
-		pid = res['pid']
-		types = nltk_functions.tokenise_and_lemm(title_abs)
-		#bigrams,trigrams = nltk_functions.bigrams_and_trigrams(abs)
-		bigrams,trigrams = nltk_functions.bigrams_and_trigrams(" ".join(types))
-		for s in set(types):
-			if s in ignoreList:
-				pass
-			else:
-				#add to pub-concept dic
-				pubConceptDic[pid][s]='type'
-				if s in typeDic:
-					typeDic[s]+=1
+		if len(res['a'])>minAbsLength:
+			#combine title and abstract
+			title_abs = res['t']+res['a']
+			#abs = res['a']
+			pid = res['pid']
+			types = nltk_functions.tokenise_and_lemm(title_abs)
+			#bigrams,trigrams = nltk_functions.bigrams_and_trigrams(abs)
+			bigrams,trigrams = nltk_functions.bigrams_and_trigrams(" ".join(types))
+			for s in set(types):
+				if s in ignoreList:
+					pass
 				else:
-					typeDic[s] = 1
-		for s in set(bigrams):
-			if len(set(s).intersection(ignoreList))==0:
-				ss = s[0]+':'+s[1]
-				#add to pub-concept dic
-				pubConceptDic[pid][ss]='bigram'
-				if ss in bigramDic:
-					bigramDic[ss]+=1
-				else:
-					bigramDic[ss] = 1
-		for s in set(trigrams):
-			if len(set(s).intersection(ignoreList))==0:
-				ss = s[0]+':'+s[1]+':'+s[2]
-				#add to pub-concept dic
-				pubConceptDic[pid][ss]='trigram'
-				if ss in trigramDic:
-					trigramDic[ss]+=1
-				else:
-					trigramDic[ss] = 1
+					#add to pub-concept dic
+					pubConceptDic[pid][s]='type'
+					if s in typeDic:
+						typeDic[s]+=1
+					else:
+						typeDic[s] = 1
+			for s in set(bigrams):
+				if len(set(s).intersection(ignoreList))==0:
+					ss = s[0]+':'+s[1]
+					#add to pub-concept dic
+					pubConceptDic[pid][ss]='bigram'
+					if ss in bigramDic:
+						bigramDic[ss]+=1
+					else:
+						bigramDic[ss] = 1
+			for s in set(trigrams):
+				if len(set(s).intersection(ignoreList))==0:
+					ss = s[0]+':'+s[1]+':'+s[2]
+					#add to pub-concept dic
+					pubConceptDic[pid][ss]='trigram'
+					if ss in trigramDic:
+						trigramDic[ss]+=1
+					else:
+						trigramDic[ss] = 1
 
 	for t in sorted(typeDic, key=typeDic.get, reverse=True):
 		o1.write(t+'\t'+str(typeDic[t])+'\n')

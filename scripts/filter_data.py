@@ -158,58 +158,63 @@ def find_similar():
 		for p in pubSameAuthorDic:
 			w.write(p+'\t'+str(",".join(pubSameAuthorDic[p]))+'\n')
 
-	#load outputs
-	pubDic = {}
-	with open('data/outputs.csv', 'rb') as a:
-		next(a)
-		for line in reader(a, delimiter=','):
-			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
-			#pubDic[PUBLICATION_ID]=TITLE
-			#only want pubs with abstracsts > some length
-			if len(ABSTRACT)>config.minAbsLength:
-				pubDic[PUBLICATION_ID]=[TITLE,ABSTRACT]
+	if os.path.exists('output/conflicting_titles.txt'):
+		print "Already created conflict files":
+	else:
+		#load outputs
+		pubDic = {}
+		with open('data/outputs.csv', 'rb') as a:
+			next(a)
+			for line in reader(a, delimiter=','):
+				PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
+				#pubDic[PUBLICATION_ID]=TITLE
+				#only want pubs with abstracsts > some length
+				#if len(ABSTRACT)>config.minAbsLength:
+				if TYPE != 'workingpaper/workingpaper':
+					pubDic[PUBLICATION_ID]=[TITLE,ABSTRACT]
 
-	threshold_ratio = 0.9
-	num_lines = sum(1 for line in open('output/outputs_same_authors.csv'))
-	counter=0
-	tCheck = open('output/conflicting_titles.txt','w')
-	aCheck = open('output/conflicting_abstracts.txt','w')
-	with open('output/outputs_same_authors.csv', 'rb') as a:
-		for line in a:
-			if counter % 1000 == 0:
-				t = strftime("%H:%M:%S", gmtime())
-				print t,counter,num_lines
-			counter+=1
-			line = line.rstrip()
-			pubs,authors = line.split('\t')
-			p1,p2 = pubs.split(':')
+		threshold_ratio = 0.9
+		num_lines = sum(1 for line in open('output/outputs_same_authors.csv'))
+		counter=0
+		tCheck = open('output/conflicting_titles.txt','w')
+		aCheck = open('output/conflicting_abstracts.txt','w')
+		with open('output/outputs_same_authors.csv', 'rb') as a:
+			for line in a:
+				if counter % 1000 == 0:
+					t = strftime("%H:%M:%S", gmtime())
+					print t,counter,num_lines
+				counter+=1
+				line = line.rstrip()
+				pubs,authors = line.split('\t')
+				p1,p2 = pubs.split(':')
 
-			#check for people listed in authors but not in outputs
-			if p1 in pubDic and p2 in pubDic:
-				title1 = pubDic[p1][0]
-				title2 = pubDic[p2][0]
-				abs1 = pubDic[p1][1]
-				abs2 = pubDic[p2][1]
+				#check for people listed in authors but not in outputs
+				if p1 in pubDic and p2 in pubDic:
+					title1 = pubDic[p1][0]
+					title2 = pubDic[p2][0]
+					abs1 = pubDic[p1][1]
+					abs2 = pubDic[p2][1]
 
-				#need to have abstracts as titles are duplicated
-				if len(abs1) > 0 and len(abs2) > 0:
 					#compare titles
 					ratio = difflib.SequenceMatcher(None, title1, title2).ratio()
 					if ratio>threshold_ratio:
-						#print 'Title',ratio
-						#print '\t',p1,title1
-						#print '\t',p2,title2
 						tCheck.write(str(ratio)+'\t'+str(p1)+'\t'+str(p2)+'\t'+title1+'\t'+title2+'\n')
-
 					#compare abstracts
-					ratio = difflib.SequenceMatcher(None, abs1, abs2).ratio()
-					if ratio>threshold_ratio:
-						#print 'Abstract',ratio
-						#print '\t',p1,abs1
-						#print '\t',p2,abs2
-						aCheck.write(str(ratio)+'\t'+str(p1)+'\t'+str(p2)+'\t'+abs1+'\t'+abs2+'\n')
+					if len(abs1) > config.minAbsLength and len(abs2) > config.minAbsLength:
+						ratio = difflib.SequenceMatcher(None, abs1, abs2).ratio()
+						if ratio>threshold_ratio:
+							aCheck.write(str(ratio)+'\t'+str(p1)+'\t'+str(p2)+'\t'+abs1+'\t'+abs2+'\n')
 
-	
+	print "Parsing conflict files"
+	tDic = {}
+	with open('output/conflicting_titles.txt', 'rb') as a:
+		for line in a:
+			line = line.rstrip()
+			ratio,p1,p2,pt1,pt2 = line.split('\t')
+			for p in tDic:
+				if p1 in tDic[p]:
+					tDic[p].append(p1)
+
 
 def main():
 	#check_data()

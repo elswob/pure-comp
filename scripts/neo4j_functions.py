@@ -91,7 +91,7 @@ def load_outputs():
 		for line in reader(a, delimiter=','):
 			line = string_format(line)
 			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
-			if len(ABSTRACT)>config.minAbsLength:
+			if TYPE != 'workingpaper/workingpaper':
 				if PUBLICATION_ID not in pubDic:
 					if PUBLICATION_YEAR == '':
 						PUBLICATION_YEAR = '0'
