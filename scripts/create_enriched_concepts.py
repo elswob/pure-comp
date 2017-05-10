@@ -33,9 +33,11 @@ def background_frequencies():
 		if counter % 1000 == 0:
 			print counter
 		counter+=1
-		abs = res['a']
+		#combine title and abstract
+		title_abs = res['t']+res['a']
+		#abs = res['a']
 		pid = res['pid']
-		types = nltk_functions.tokenise_and_lemm(abs)
+		types = nltk_functions.tokenise_and_lemm(title_abs)
 		#bigrams,trigrams = nltk_functions.bigrams_and_trigrams(abs)
 		bigrams,trigrams = nltk_functions.bigrams_and_trigrams(" ".join(types))
 		for s in set(types):

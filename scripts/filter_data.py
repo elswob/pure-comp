@@ -1,9 +1,12 @@
 import requests, os, json
 import xmltodict
 from csv import reader
+import config
 from difflib import SequenceMatcher
 import difflib
 import itertools
+import collections
+from time import gmtime, strftime
 
 dataDir = '/Users/be15516/projects/pure-comp/data'
 
@@ -122,36 +125,91 @@ def similar(a, b):
 	return SequenceMatcher(None, a, b).ratio()
 
 def find_similar():
-	print "Finding similar text"
-	#pDic = {}
-	pList = []
-	with open('data/outputs_1000.csv', 'rb') as a:
+	print "### Finding similar text"
+	print "Reading authors.csv"
+	pubAuthorDic = {}
+	if os.path.exists('output/outputs_same_authors.csv'):
+		print "Same author data already generated"
+	else:
+		w = open('output/outputs_same_authors.csv','w')
+		with open('data/authors.csv', 'rb') as a:
+			next(a)
+			for line in reader(a, delimiter=','):
+				PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME = line
+				if PUBLICATION_ID in pubAuthorDic:
+					pubAuthorDic[PUBLICATION_ID].append(PERSON_ID)
+				else:
+					pubAuthorDic[PUBLICATION_ID] = [PERSON_ID]
+		pubSameAuthorDic = {}
+		counter=0
+		for pub1 in pubAuthorDic:
+			if counter % 1000 == 0:
+				t = strftime("%H:%M:%S", gmtime())
+				print t,counter,len(pubAuthorDic)
+			counter+=1
+			for pub2 in pubAuthorDic:
+				if pub1 < pub2:
+					if sorted(pubAuthorDic[pub1])==sorted(pubAuthorDic[pub2]):
+						#w.write(str(pub1)+'\t'+str(pub2)+'\t'+str(",".join(pubAuthorDic[pub1]))+'\n')
+						s = sorted([pub1,pub2])
+						pubSameAuthorDic[s[0]+":"+s[1]]=pubAuthorDic[pub1]
+						#print pub1,pubAuthorDic[pub1],pub2,pubAuthorDic[pub2]
+
+		for p in pubSameAuthorDic:
+			w.write(p+'\t'+str(",".join(pubSameAuthorDic[p]))+'\n')
+
+	#load outputs
+	pubDic = {}
+	with open('data/outputs.csv', 'rb') as a:
 		next(a)
 		for line in reader(a, delimiter=','):
 			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
-			if len(TITLE)>10:
-				# pDic[PUBLICATION_ID]=TITLE
-				pList.append(TITLE)
-	# counter=0
-	# for i in pDic:
-	# 	if counter % 100 == 0:
-	# 		print counter,len(pDic)
-	# 	counter+=1
-	# 	for j in pDic:
-	# 		if i != j:
-	# 			s = similar(pDic[i],pDic[j])
-	# 			if s > 0.8:
-	# 				print i,j,s
+			#pubDic[PUBLICATION_ID]=TITLE
+			#only want pubs with abstracsts > some length
+			if len(ABSTRACT)>config.minAbsLength:
+				pubDic[PUBLICATION_ID]=[TITLE,ABSTRACT]
 
-	threshold_ratio = 0.75
+	threshold_ratio = 0.9
+	num_lines = sum(1 for line in open('output/outputs_same_authors.csv'))
 	counter=0
-	for str_1, str_2 in itertools.combinations(pList, 2):
-		if counter % 1000 == 0:
-			print counter,len(pList)
-		counter+=1
-		ratio = difflib.SequenceMatcher(None, str_1, str_2).ratio()
-		if (ratio > threshold_ratio):
-			print '%f\t%s\t\t could be \t\t%s' % (ratio, str_1, str_2)
+	tCheck = open('output/conflicting_titles.txt','w')
+	aCheck = open('output/conflicting_abstracts.txt','w')
+	with open('output/outputs_same_authors.csv', 'rb') as a:
+		for line in a:
+			if counter % 1000 == 0:
+				t = strftime("%H:%M:%S", gmtime())
+				print t,counter,num_lines
+			counter+=1
+			line = line.rstrip()
+			pubs,authors = line.split('\t')
+			p1,p2 = pubs.split(':')
+
+			#check for people listed in authors but not in outputs
+			if p1 in pubDic and p2 in pubDic:
+				title1 = pubDic[p1][0]
+				title2 = pubDic[p2][0]
+				abs1 = pubDic[p1][1]
+				abs2 = pubDic[p2][1]
+
+				#need to have abstracts as titles are duplicated
+				if len(abs1) > 0 and len(abs2) > 0:
+					#compare titles
+					ratio = difflib.SequenceMatcher(None, title1, title2).ratio()
+					if ratio>threshold_ratio:
+						#print 'Title',ratio
+						#print '\t',p1,title1
+						#print '\t',p2,title2
+						tCheck.write(str(ratio)+'\t'+str(p1)+'\t'+str(p2)+'\t'+title1+'\t'+title2+'\n')
+
+					#compare abstracts
+					ratio = difflib.SequenceMatcher(None, abs1, abs2).ratio()
+					if ratio>threshold_ratio:
+						#print 'Abstract',ratio
+						#print '\t',p1,abs1
+						#print '\t',p2,abs2
+						aCheck.write(str(ratio)+'\t'+str(p1)+'\t'+str(p2)+'\t'+abs1+'\t'+abs2+'\n')
+
+	
 
 def main():
 	#check_data()

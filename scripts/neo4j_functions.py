@@ -91,18 +91,19 @@ def load_outputs():
 		for line in reader(a, delimiter=','):
 			line = string_format(line)
 			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
-			if PUBLICATION_ID not in pubDic:
-				if PUBLICATION_YEAR == '':
-					PUBLICATION_YEAR = '0'
-				if PUBLICATION_MONTH == '':
-					PUBLICATION_MONTH = '0'
-				if PUBLICATION_DAY == '':
-					PUBLICATION_DAY = '0'
-				com = "MERGE (p:Publication {pub_id:"+PUBLICATION_ID+",title:'"+TITLE+"',type:"+TYPE_NO+",pub_day:"+PUBLICATION_DAY+"," \
-				"pub_month:"+PUBLICATION_MONTH+",pub_year:"+PUBLICATION_YEAR+",abstract:'"+ABSTRACT+"'});"
-				print com
-				session.run(com)
-			pubDic[PUBLICATION_ID]=''
+			if len(ABSTRACT)>config.minAbsLength:
+				if PUBLICATION_ID not in pubDic:
+					if PUBLICATION_YEAR == '':
+						PUBLICATION_YEAR = '0'
+					if PUBLICATION_MONTH == '':
+						PUBLICATION_MONTH = '0'
+					if PUBLICATION_DAY == '':
+						PUBLICATION_DAY = '0'
+					com = "MERGE (p:Publication {pub_id:"+PUBLICATION_ID+",title:'"+TITLE+"',type:"+TYPE_NO+",pub_day:"+PUBLICATION_DAY+"," \
+					"pub_month:"+PUBLICATION_MONTH+",pub_year:"+PUBLICATION_YEAR+",abstract:'"+ABSTRACT+"'});"
+					print com
+					session.run(com)
+				pubDic[PUBLICATION_ID]=''
 
 	i="CREATE index on :Publication(pub_id);"
 	session.run(i)
