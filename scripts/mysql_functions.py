@@ -7,6 +7,7 @@ def connect():
 	return cnx
 
 def test_connection():
+	cnx = connect()
 	curA = cnx.cursor(buffered=True)
 
 	query = ("select * from browser_concept limit 5;")
@@ -32,19 +33,20 @@ def copy_graph_to_mysql():
 		org = res['s']
 		pos='n/a'
 		sex='n/a'
-		#curA.execute(mysql_com, (name,username,org,pos,sex))
+		curA.execute(mysql_com, (name,username,org,pos,sex))
 
-	#add orgs as people?
-	print "Adding orgs"
-	neo4j_com = "match (o:Org) return o.short_name as n, o.code as pid, o.short_name as s;"
-	mysql_com = ("INSERT IGNORE INTO browser_person (name, user_name, institute, position, sex) " "VALUES (%s, %s, %s, %s, %s)")
-	for res in session.run(neo4j_com):
-		name = res['n']
-		#print name
-		username = res['pid']
-		org = res['s']
-		pos='n/a'
-		sex='n/a'
+	#add orgs as people - no
+	# print "Adding orgs"
+	# neo4j_com = "match (o:Org) return o.short_name as n, o.code as pid, o.short_name as s;"
+	# mysql_com = ("INSERT IGNORE INTO browser_person (name, user_name, institute, position, sex) " "VALUES (%s, %s, %s, %s, %s)")
+	# for res in session.run(neo4j_com):
+	# 	name = res['n']
+	# 	#print name
+	# 	username = res['pid']
+	# 	org = res['s']
+	# 	pos='n/a'
+	# 	sex='n/a'
+	# 	curA.execute(mysql_com, (name,username,org,pos,sex))
 
 	#concepts
 	#name,type
@@ -75,21 +77,21 @@ def copy_graph_to_mysql():
 		#print pid,cName
 		curA.execute(mysql_com, (pid,cName,localCount,localTotal,globalCount,globalTotal,year,cpval))
 
-	print "Adding org-concepts"
-	neo4j_com = "match (o:Org)-[e]-(c:Concept) return o.code as pid,c.name, e.localCount,e.localTotal,e.globalCount,e.globalTotal,e.year,e.cpval;"
-	mysql_com = ("INSERT IGNORE INTO browser_enriched (person_id,concept_id,localCount,localTotal,globalCount,globalTotal,year,cpval) "
-				 "VALUES ((SELECT id from browser_person where user_name = %s), (SELECT id from browser_concept where name = %s), %s, %s, %s, %s, %s, %s )")
-	for res in session.run(neo4j_com):
-		pid = res['pid']
-		cName = res['c.name']
-		localCount = res['e.localCount']
-		localTotal = res['e.localTotal']
-		globalCount = res['e.globalCount']
-		globalTotal = res['e.globalTotal']
-		year = res['e.year']
-		cpval = res['e.cpval']
-		#print pid,cName
-		curA.execute(mysql_com, (pid,cName,localCount,localTotal,globalCount,globalTotal,year,cpval))
+	# print "Adding org-concepts"
+	# neo4j_com = "match (o:Org)-[e]-(c:Concept) return o.code as pid,c.name, e.localCount,e.localTotal,e.globalCount,e.globalTotal,e.year,e.cpval;"
+	# mysql_com = ("INSERT IGNORE INTO browser_enriched (person_id,concept_id,localCount,localTotal,globalCount,globalTotal,year,cpval) "
+	# 			 "VALUES ((SELECT id from browser_person where user_name = %s), (SELECT id from browser_concept where name = %s), %s, %s, %s, %s, %s, %s )")
+	# for res in session.run(neo4j_com):
+	# 	pid = res['pid']
+	# 	cName = res['c.name']
+	# 	localCount = res['e.localCount']
+	# 	localTotal = res['e.localTotal']
+	# 	globalCount = res['e.globalCount']
+	# 	globalTotal = res['e.globalTotal']
+	# 	year = res['e.year']
+	# 	cpval = res['e.cpval']
+	# 	print pid,cName
+	# 	curA.execute(mysql_com, (pid,cName,localCount,localTotal,globalCount,globalTotal,year,cpval))
 
 
 	cnx.close()
