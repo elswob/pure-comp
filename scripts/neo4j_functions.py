@@ -1,4 +1,4 @@
-import config
+import config, filter_data
 import sys
 from csv import reader
 
@@ -65,45 +65,70 @@ def load_staff():
 	session = connect()
 	#PERSON_ID,PUBLISHED_NAME,FORENAME,SURNAME,ORGANISATION_CODE,TYPE,JOB_TITLE,START_DATE,END_DATE
 	staffDic = {}
-	with open('data/staff.csv', 'rb') as a:
-		next(a)
+	counter=0
+	with open('data/staff_2013.csv', 'rb') as a:
 		for line in reader(a, delimiter=','):
 			line = string_format(line)
 			person_id,published_name,forename,surname,organisation_code,type,job_title,start_date,end_date = line
 			if person_id not in staffDic:
+				counter+=1
 				com = "MATCH (o:Org {code:'"+organisation_code+"'}) MERGE (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
 				"forename: '"+forename+"',surname: '"+surname+"',organisation_code:'"+organisation_code+"'," \
 				"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'}) " \
-				"MERGE (s)-[:MEMBER_OF]-(o);"
-				print com
+				"MERGE (s)-[:MEMBER_OF]-(o) return o.code as o;"
+				#print counter
 				session.run(com)
+				#com = "MERGE (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
+				#"forename: '"+forename+"',surname: '"+surname+"',organisation_code:'"+organisation_code+"'," \
+				#"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'});"
+				#print com
+				#session.run(com)
+				#com2 = "MATCH (o:Org) where o.code = '"+organisation_code+"' return o.code as o;"
+				#print com2
+
+				#for res in session.run(com2):
+				#	print organisation_code,res['o'],counter
+					#if len(res['o.code'])
+
 			staffDic[person_id]=''
 
 	i="CREATE index on :Staff(person_id);"
 	session.run(i)
 
+	#check loading
+	com = "match (s:Staff) return s.person_id as s;"
+	for res in session.run(com):
+		staffDic[str(res['s'])]=1
+	for s in staffDic:
+		if staffDic[s]!=1:
+			print 'missing',s
+
 def load_outputs():
 	session = connect()
+
+	#load same title info
+	ignorePubs = filter_data.ignore_pubs()
+
 	#PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT
 	pubDic = {}
-	with open('data/outputs.csv', 'rb') as a:
-		next(a)
+	with open('data/outputs_2013.csv', 'rb') as a:
 		for line in reader(a, delimiter=','):
 			line = string_format(line)
 			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
-			if TYPE != 'workingpaper/workingpaper':
-				if PUBLICATION_ID not in pubDic:
-					if PUBLICATION_YEAR == '':
-						PUBLICATION_YEAR = '0'
-					if PUBLICATION_MONTH == '':
-						PUBLICATION_MONTH = '0'
-					if PUBLICATION_DAY == '':
-						PUBLICATION_DAY = '0'
-					com = "MERGE (p:Publication {pub_id:"+PUBLICATION_ID+",title:'"+TITLE+"',type:"+TYPE_NO+",pub_day:"+PUBLICATION_DAY+"," \
-					"pub_month:"+PUBLICATION_MONTH+",pub_year:"+PUBLICATION_YEAR+",abstract:'"+ABSTRACT+"'});"
-					print com
-					session.run(com)
-				pubDic[PUBLICATION_ID]=''
+			if PUBLICATION_ID not in ignorePubs:
+				if TYPE != 'workingpaper/workingpaper':
+					if PUBLICATION_ID not in pubDic:
+						if PUBLICATION_YEAR == '':
+							PUBLICATION_YEAR = '0'
+						if PUBLICATION_MONTH == '':
+							PUBLICATION_MONTH = '0'
+						if PUBLICATION_DAY == '':
+							PUBLICATION_DAY = '0'
+						com = "MERGE (p:Publication {pub_id:"+PUBLICATION_ID+",title:'"+TITLE+"',type:"+TYPE_NO+",pub_day:"+PUBLICATION_DAY+"," \
+						"pub_month:"+PUBLICATION_MONTH+",pub_year:"+PUBLICATION_YEAR+",abstract:'"+ABSTRACT+"'});"
+						print com
+						session.run(com)
+					pubDic[PUBLICATION_ID]=''
 
 	i="CREATE index on :Publication(pub_id);"
 	session.run(i)
@@ -111,8 +136,7 @@ def load_outputs():
 def load_authors():
 	session = connect()
 	#PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME
-	with open('data/authors.csv', 'rb') as a:
-		next(a)
+	with open('data/authors_2013.csv', 'rb') as a:
 		for line in reader(a, delimiter=','):
 			person,publication,name = line
 			com = "MATCH (s:Staff {person_id:"+person+"}) , (p:Publication {pub_id:"+publication+"}) merge (s)-[:PUBLISHED]-(p);"

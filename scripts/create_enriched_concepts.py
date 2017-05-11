@@ -5,7 +5,6 @@ from collections import defaultdict
 outDir='concepts/'
 
 freqCutoff=1000
-minAbsLength = config.minAbsLength
 
 def ignore_tokens():
 	#cat output/background_type_frequencies.txt | grep '/' | head -n 20 | cut -f1 | tr '\n' ','
@@ -34,7 +33,7 @@ def background_frequencies():
 		if counter % 1000 == 0:
 			print counter
 		counter+=1
-		if len(res['a'])>minAbsLength:
+		if len(res['a'])>config.minAbsLength:
 			#combine title and abstract
 			title_abs = res['t']+res['a']
 			#abs = res['a']
@@ -489,8 +488,8 @@ if __name__ == '__main__':
 		org_frequencies()
 
 	#run enrichment steps
-#	#enrich_person()
-	#enrich_orgs()
-	#add_enriched_to_graph()
+	#enrich_person()
+	enrich_orgs()
+	add_enriched_to_graph()
 	add_pub_concepts()
 	distance_metrics()
