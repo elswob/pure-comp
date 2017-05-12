@@ -23,13 +23,15 @@ def copy_graph_to_mysql():
 
 	#add orgs
 	print "Adding orgs"
-	neo4j_com = "match (o:Org) return o.code as c, o.short_name as s, o.full_name as f, o.url as u, o.type as t;"
+	neo4j_com = "match (o:Org) return o.code as c, o.short_name as s, o.full_name as f, o.url as u, o.type as t order by o.code;"
 	mysql_com = ("INSERT IGNORE INTO browser_org (code, short_name, full_name, url, type) " "VALUES (%s, %s, %s, %s, %s)")
 	for res in session.run(neo4j_com):
 		code = res['c']
 		short = res['s']
 		full = res['f']
 		url=res['u']
+		if len(url)==0:
+			url = 'n/a'
 		type=res['t']
 		#print code,short,full,url,type
 		try:
@@ -50,7 +52,7 @@ def copy_graph_to_mysql():
 		org = res['s']
 		pos='n/a'
 		sex='n/a'
-		#curA.execute(mysql_com, (org,user_name,name,pos,sex))
+		curA.execute(mysql_com, (org,user_name,name,pos,sex))
 
 	#concepts
 	#name,type
@@ -61,7 +63,7 @@ def copy_graph_to_mysql():
 		name = res['n']
 		#print name
 		type = res['t']
-		#curA.execute(mysql_com, (name, type))
+		curA.execute(mysql_com, (name, type))
 
 	#enrichments
 	#person_id,globalCount,cpval,concept_id,globalTotal,localCount,localTotal,year
@@ -79,7 +81,7 @@ def copy_graph_to_mysql():
 		year = res['e.year']
 		cpval = res['e.cpval']
 		#print pid,cName
-		#curA.execute(mysql_com, (pid,cName,localCount,localTotal,globalCount,globalTotal,year,cpval))
+		curA.execute(mysql_com, (pid,cName,localCount,localTotal,globalCount,globalTotal,year,cpval))
 
 	print "Adding org-concepts"
 	neo4j_com = "match (o:Org)-[e]-(c:Concept) return o.code as c,c.name, e.localCount,e.localTotal,e.globalCount,e.globalTotal,e.year,e.cpval;"
@@ -95,7 +97,7 @@ def copy_graph_to_mysql():
 		year = res['e.year']
 		cpval = res['e.cpval']
 		#print pid, cName
-		#curA.execute(mysql_com, (pid, cName, localCount, localTotal, globalCount, globalTotal, year, cpval))
+		curA.execute(mysql_com, (pid, cName, localCount, localTotal, globalCount, globalTotal, year, cpval))
 
 
 	cnx.close()
