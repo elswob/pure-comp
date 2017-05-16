@@ -12,17 +12,18 @@ def ignore_tokens():
 	other = ['one','two','three','four','five','six','seven','eight','nine','ten']
 	return l
 
-def background_frequencies():
+def background_frequencies(year):
 	print "Getting background frequencies"
 	session = neo4j_functions.connect()
-	o1 = open(outDir+'/background_type_frequencies.txt', 'w')
+	o1 = open(outDir+'/background_type_frequencies_'+str(year)+'.txt', 'w')
 	o1.write('type\tcount\n')
-	o2 = open(outDir+'/background_bigram_frequencies.txt', 'w')
+	o2 = open(outDir+'/background_bigram_frequencies_'+str(year)+'.txt', 'w')
 	o2.write('bigram\tcount\n')
-	o3 = open(outDir+'/background_trigram_frequencies.txt', 'w')
+	o3 = open(outDir+'/background_trigram_frequencies_'+str(year)+'.txt', 'w')
 	o3.write('trigram\tcount\n')
 
-	com = "match (s:Staff)--(p:Publication) return distinct p.abstract as a, p.title as t, p.pub_id as pid;"
+	com = "match (s:Staff)--(p:Publication) where p.pub_year <= "+str(year)+" return distinct p.abstract as a, p.title as t, p.pub_id as pid;"
+	print com
 	typeDic = {}
 	bigramDic = {}
 	trigramDic = {}
@@ -77,7 +78,7 @@ def background_frequencies():
 	for t in sorted(trigramDic, key=trigramDic.get, reverse=True):
 		o3.write(t+'\t'+str(trigramDic[t])+'\n')
 
-	o4 = open(outDir+'/pub_concept.txt','w')
+	o4 = open(outDir+'/pub_concept_'+str(year)+'.txt','w')
 	l = len(pubConceptDic)
 	counter=0
 	for p in pubConceptDic:
@@ -89,10 +90,10 @@ def background_frequencies():
 
 	session.close()
 
-def typeFreqs():
+def typeFreqs(year):
 	#read in type freqs for filtering
 	typeDic = {}
-	with open(outDir+'/background_type_frequencies.txt', 'rb') as a:
+	with open(outDir+'/background_type_frequencies_'+str(year)+'.txt', 'rb') as a:
 		next(a)
 		for line in a:
 			line = line.rstrip()
@@ -100,10 +101,10 @@ def typeFreqs():
 			typeDic[t]=c
 	return typeDic
 
-def readPubConcepts():
+def readPubConcepts(year):
 	print "Recreating pubConcept dictionary..."
 	pubConceptDic = defaultdict(dict)
-	with open(outDir+'/pub_concept.txt', 'rb') as a:
+	with open(outDir+'/pub_concept_'+str(year)+'.txt', 'rb') as a:
 		for line in a:
 			line = line.rstrip()
 			pid,concept,type = line.split('\t')
@@ -112,27 +113,27 @@ def readPubConcepts():
 	#print firstpair
 	return pubConceptDic
 
-def person_frequencies():
+def person_frequencies(year):
 	print "Getting person frequencies"
 	session = neo4j_functions.connect()
-	o1 = open(outDir+'/person_type_frequencies.txt', 'w')
+	o1 = open(outDir+'/person_type_frequencies_'+str(year)+'.txt', 'w')
 	o1.write('person\ttype\tcount\n')
-	o2 = open(outDir+'/person_bigram_frequencies.txt', 'w')
+	o2 = open(outDir+'/person_bigram_frequencies_'+str(year)+'.txt', 'w')
 	o2.write('person\tbigram\tcount\n')
-	o3 = open(outDir+'/person_trigram_frequencies.txt', 'w')
+	o3 = open(outDir+'/person_trigram_frequencies_'+str(year)+'.txt', 'w')
 	o3.write('person\ttrigram\tcount\n')
 
 	#com = "match (s:Staff)--(p:Publication) where p.pub_id = 2942913 return distinct s.published_name as p1, s.person_id as p2, p.pub_id as pid;"
-	com = "match (s:Staff)--(p:Publication) return distinct s.published_name as p1, s.person_id as p2, p.pub_id as pid;"
+	com = "match (s:Staff)--(p:Publication) where p.pub_year <= "+str(year)+" return distinct s.published_name as p1, s.person_id as p2, p.pub_id as pid;"
 	typeDic = defaultdict(dict)
 	bigramDic = defaultdict(dict)
 	trigramDic = defaultdict(dict)
 	ignoreList = ignore_tokens()
 	counter=0
 	#read in type freqs for filtering
-	typeConceptDic = typeFreqs()
+	typeConceptDic = typeFreqs(year)
 	#get pubConceptDic
-	pubConceptDic = readPubConcepts()
+	pubConceptDic = readPubConcepts(year)
 	for res in session.run(com):
 		if counter % 1000 == 0:
 			print counter
@@ -178,25 +179,25 @@ def person_frequencies():
 
 	session.close()
 
-def org_frequencies():
+def org_frequencies(year):
 	print "Getting org frequencies"
 	session = neo4j_functions.connect()
-	o1 = open(outDir+'/org_type_frequencies.txt', 'w')
+	o1 = open(outDir+'/org_type_frequencies_'+str(year)+'.txt', 'w')
 	o1.write('org\ttype\tcount\n')
-	o2 = open(outDir+'/org_bigram_frequencies.txt', 'w')
+	o2 = open(outDir+'/org_bigram_frequencies_'+str(year)+'.txt', 'w')
 	o2.write('org\tbigram\tcount\n')
-	o3 = open(outDir+'/org_trigram_frequencies.txt', 'w')
+	o3 = open(outDir+'/org_trigram_frequencies_'+str(year)+'.txt', 'w')
 	o3.write('org\ttrigram\tcount\n')
-	com = "match (o:Org)--(s:Staff)--(p:Publication) return distinct o.short_name as o1, o.code as o2, p.pub_id as pid;"
+	com = "match (o:Org)--(s:Staff)--(p:Publication) where p.pub_year <= "+str(year)+" return distinct o.short_name as o1, o.code as o2, p.pub_id as pid;"
 	typeDic = defaultdict(dict)
 	bigramDic = defaultdict(dict)
 	trigramDic = defaultdict(dict)
 	counter=0
 	ignoreList = ignore_tokens()
 	#read in type freqs for filtering
-	typeConceptDic = typeFreqs()
+	typeConceptDic = typeFreqs(year)
 	#get pubConceptDic
-	pubConceptDic = readPubConcepts()
+	pubConceptDic = readPubConcepts(year)
 	for res in session.run(com):
 		if counter % 1000 == 0:
 			print counter
@@ -238,13 +239,13 @@ def org_frequencies():
 			o3.write(str(p)+'\t'+t+'\t'+str(trigramDic[p][t])+'\n')
 	session.close()
 
-def enrich_person():
+def enrich_person(year):
 	cor_pval = 1e-5
 	for i in ['type','bigram','trigram']:
 		print "Finding enriched person data for type "+i+" ..."
 		#get background frequencies
 		bDic = {}
-		with open(outDir+'/background_'+i+'_frequencies.txt', 'rb') as b:
+		with open(outDir+'/background_'+i+'_frequencies_'+str(year)+'.txt', 'rb') as b:
 			next(b)
 			for line in b:
 				line = line.rstrip()
@@ -254,8 +255,8 @@ def enrich_person():
 		#enrich person data
 		e = defaultdict(dict)
 		counter=0
-		num_lines = sum(1 for line in open(outDir+'/person_'+i+'_frequencies.txt'))
-		with open(outDir+'/person_'+i+'_frequencies.txt', 'rb') as p:
+		num_lines = sum(1 for line in open(outDir+'/person_'+i+'_frequencies_'+str(year)+'.txt'))
+		with open(outDir+'/person_'+i+'_frequencies_'+str(year)+'.txt', 'rb') as p:
 			next(p)
 			#get num pubs per person
 			pDic = stats_functions.pubs_per_person()
@@ -286,7 +287,7 @@ def enrich_person():
 			e_cor[p] = stats_functions.multiple_test_correction(e[p])
 			#print d_mc
 			#print e
-		o = open(outDir+'/person_'+i+'_enriched.txt','w')
+		o = open(outDir+'/person_'+i+'_enriched_'+str(year)+'.txt','w')
 		o.write('name\t'+i+'\ta1\ta2\tb1\tb2\todds\tpval\tcor-pval\n')
 		#print e_cor
 		for p in e_cor:
@@ -296,13 +297,13 @@ def enrich_person():
 				o.write(p+'\t'+t+'\t'+str(a1)+'\t'+str(a2)+'\t'+str(b1)+'\t'+str(b2)+'\t'+str("%.4f" % odds)+'\t'+str("%03.02e" % pval)+'\t'+str("%03.02e" % cor_pval)+'\n')
 		o.close()
 
-def enrich_orgs():
+def enrich_orgs(year):
 	cor_pval = 1e-5
 	for i in ['type','bigram','trigram']:
 		print "Finding enriched org data for type "+i+" ..."
 		#get background frequencies
 		bDic = {}
-		with open(outDir+'/background_'+i+'_frequencies.txt', 'rb') as b:
+		with open(outDir+'/background_'+i+'_frequencies_'+str(year)+'.txt', 'rb') as b:
 			next(b)
 			for line in b:
 				line = line.rstrip()
@@ -312,8 +313,8 @@ def enrich_orgs():
 		#enrich org data
 		e = defaultdict(dict)
 		counter=0
-		num_lines = sum(1 for line in open(outDir+'/org_'+i+'_frequencies.txt'))
-		with open(outDir+'/org_'+i+'_frequencies.txt', 'rb') as p:
+		num_lines = sum(1 for line in open(outDir+'/org_'+i+'_frequencies_'+str(year)+'.txt'))
+		with open(outDir+'/org_'+i+'_frequencies_'+str(year)+'.txt', 'rb') as p:
 			next(p)
 			#get num pubs per person
 			pDic = stats_functions.pubs_per_org()
@@ -340,7 +341,7 @@ def enrich_orgs():
 			e_cor[p] = stats_functions.multiple_test_correction(e[p])
 			#print d_mc
 			#print e
-		o = open(outDir+'/org_'+i+'_enriched.txt','w')
+		o = open(outDir+'/org_'+i+'_enriched_'+str(year)+'.txt','w')
 		o.write('name\t'+i+'\ta1\ta2\tb1\tb2\todds\tpval\tcor-pval\n')
 		#print e_cor
 		for p in e_cor:
@@ -350,16 +351,16 @@ def enrich_orgs():
 				o.write(p+'\t'+t+'\t'+str(a1)+'\t'+str(a2)+'\t'+str(b1)+'\t'+str(b2)+'\t'+str("%.4f" % odds)+'\t'+str("%03.02e" % pval)+'\t'+str("%03.02e" % cor_pval)+'\n')
 		o.close()
 
-def add_enriched_to_graph():
+def add_enriched_to_graph(year):
 	print "Adding enrichment data to graph..."
 	session = neo4j_functions.connect()
 	for concept_type in ['type','bigram','trigram']:
 		print "Adding data for data type '"+concept_type+"'"
 		counter=0
-		num_lines = sum(1 for line in open(outDir+'/person_'+concept_type+'_enriched.txt'))
+		num_lines = sum(1 for line in open(outDir+'/person_'+concept_type+'_enriched_'+str(year)+'.txt'))
 
 		#create concept nodes and index
-		with open(outDir+'/person_'+concept_type+'_enriched.txt', 'rb') as p:
+		with open(outDir+'/person_'+concept_type+'_enriched_'+str(year)+'.txt', 'rb') as p:
 			next(p)
 			for line in p:
 				line = line.rstrip()
@@ -383,7 +384,7 @@ def add_enriched_to_graph():
 		counter=0
 		#create person-concept relationships
 		print "Creating person-concept relationships..."
-		with open(outDir+'/person_'+concept_type+'_enriched.txt', 'rb') as p:
+		with open(outDir+'/person_'+concept_type+'_enriched_'+str(year)+'.txt', 'rb') as p:
 			next(p)
 			for line in p:
 				line = line.rstrip()
@@ -402,14 +403,14 @@ def add_enriched_to_graph():
 				person_id = name.split(':')[1]
 				com = "MATCH (s:Staff {person_id: "+person_id+"}) " \
 					  "MATCH (c:Concept {name:'"+type+"',type:'"+concept_type+"'}) " \
-					  "MERGE (s)-[:ENRICHED{type:'pure-comp',year:2014,localCount:"+str(a1)+"," \
+					  "MERGE (s)-[:ENRICHED{type:'pure-comp',year:"+str(year)+",localCount:"+str(a1)+"," \
 					  "localTotal:"+str(a2)+",globalCount:"+str(b1)+",globalTotal:"+str(b2)+",cpval:"+str(cor_pval)+"}]-(c);"
 				session.run(com)
 
 		counter=0
 		#create org-concept relationships
 		print "Creating org-concept relationships..."
-		with open(outDir+'/org_'+concept_type+'_enriched.txt', 'rb') as p:
+		with open(outDir+'/org_'+concept_type+'_enriched_'+str(year)+'.txt', 'rb') as p:
 			next(p)
 			for line in p:
 				if counter % 10000 == 0:
@@ -427,24 +428,25 @@ def add_enriched_to_graph():
 				code = name.split(':')[1]
 				com = "MATCH (o:Org {code: '"+code+"'}) " \
 					  "MATCH (c:Concept {name:'"+type+"',type:'"+concept_type+"'}) " \
-					  "MERGE (o)-[:ENRICHED{type:'pure-comp',year:2014,localCount:"+str(a1)+"," \
+					  "MERGE (o)-[:ENRICHED{type:'pure-comp',year:"+str(year)+",localCount:"+str(a1)+"," \
 					  "localTotal:"+str(a2)+",globalCount:"+str(b1)+",globalTotal:"+str(b2)+",cpval:"+str(cor_pval)+"}]-(c);"
 				#print com
 				session.run(com)
 	session.close()
 
-def add_pub_concepts():
+def add_pub_concepts(year):
 	print "Adding pub-concept data"
 	#read data
 	pubConceptDic = defaultdict(dict)
-	with open(outDir+'/pub_concept.txt', 'rb') as p:
+	with open(outDir+'/pub_concept_'+str(year)+'.txt', 'rb') as p:
 		for line in p:
 			line = line.rstrip()
 			pid,name,type = line.split('\t')
 			pubConceptDic[name+":"+type][pid]=''
 
 	session = neo4j_functions.connect()
-	com = "match (c:Concept) return c.name as n, c.type as t;"
+	#com = "match (c:Concept) return c.name as n, c.type as t;"
+	com = "match (a)-[e:ENRICHED]-(c:Concept) where e.year = "+str(year)+" return c.name as n, c.type as t;"
 	counter=0
 	for res in session.run(com):
 		if counter % 1000 == 0:
@@ -458,38 +460,42 @@ def add_pub_concepts():
 		cName = name+":"+type
 		#print len(pubConceptDic[cName]),cName
 		for p in pubConceptDic[cName]:
-			com = "match (p:Publication {pub_id:"+str(p)+"}) match (c:Concept {name:'"+name+"',type:'"+type+"'}) merge (p)-[:CONCEPT]-(c);"
+			com = "match (p:Publication {pub_id:"+str(p)+",pub_year:"+str(year)+"}) match (c:Concept {name:'"+name+"',type:'"+type+"'}) merge (p)-[:CONCEPT{year:"+str(year)+"}]-(c);"
 			#print com
 			session.run(com)
 
-def distance_metrics():
+def distance_metrics(year):
 	session = neo4j_functions.connect()
 	#staff
-	com="match (p1:Staff)-[e1:ENRICHED]->(s), (p2:Staff)-[e2:ENRICHED]->(s) where id(p1) < id(p2) with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_2014 = euc;"
+	print "Creating staff distance data"
+	com="match (p1:Staff)-[e1:ENRICHED]->(s), (p2:Staff)-[e2:ENRICHED]->(s) where id(p1) < id(p2) and e1.year = "+str(year)+" and e2.year = "+str(year)+" with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_"+str(year)+" = euc;"
 	print com
 	session.run(com)
 	#orgs
-	com="match (p1:Org)-[e1:ENRICHED]->(s), (p2:Org)-[e2:ENRICHED]->(s) where id(p1) < id(p2) with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_2014 = euc;"
+	print "Create org distance data"
+	com="match (p1:Org)-[e1:ENRICHED]->(s), (p2:Org)-[e2:ENRICHED]->(s) where id(p1) < id(p2) and e1.year = "+str(year)+" and e2.year = "+str(year)+" with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_"+str(year)+" = euc;"
 	print com
 	session.run(com)
 
 if __name__ == '__main__':
-	if os.path.exists(outDir+'/background_type_frequencies.txt'):
-		print 'Background frequencies already created'
-	else:
-		background_frequencies()
-	if os.path.exists(outDir+'/person_type_frequencies.txt'):
-		print 'Person frequencies already created'
-	else:
-		person_frequencies()
-	if os.path.exists(outDir+'/org_type_frequencies.txt'):
-		print 'Org frequencies already created'
-	else:
-		org_frequencies()
+	for year in range(2008,2014):
+		print "##### "+str(year)+" ####"
+		if os.path.exists(outDir+'/background_type_frequencies_'+str(year)+'.txt'):
+			print 'Background frequencies already created'
+		else:
+			background_frequencies(year)
+		if os.path.exists(outDir+'/person_type_frequencies_'+str(year)+'.txt'):
+			print 'Person frequencies already created'
+		else:
+			person_frequencies(year)
+		if os.path.exists(outDir+'/org_type_frequencies_'+str(year)+'.txt'):
+			print 'Org frequencies already created'
+		else:
+			org_frequencies(year)
 
-	#run enrichment steps
-	#enrich_person()
-	enrich_orgs()
-	add_enriched_to_graph()
-	add_pub_concepts()
-	distance_metrics()
+		#run enrichment steps
+		#enrich_person(year)
+		#enrich_orgs(year)
+		#add_enriched_to_graph(year)
+		add_pub_concepts(year)
+		distance_metrics(year)

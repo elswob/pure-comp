@@ -66,7 +66,8 @@ def load_staff():
 	#PERSON_ID,PUBLISHED_NAME,FORENAME,SURNAME,ORGANISATION_CODE,TYPE,JOB_TITLE,START_DATE,END_DATE
 	staffDic = {}
 	counter=0
-	with open('data/staff_2013.csv', 'rb') as a:
+	with open('data/staff.csv', 'rb') as a:
+		next(a)
 		for line in reader(a, delimiter=','):
 			line = string_format(line)
 			person_id,published_name,forename,surname,organisation_code,type,job_title,start_date,end_date = line
@@ -111,7 +112,8 @@ def load_outputs():
 
 	#PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT
 	pubDic = {}
-	with open('data/outputs_2013.csv', 'rb') as a:
+	with open('data/outputs.csv', 'rb') as a:
+		next(a)
 		for line in reader(a, delimiter=','):
 			line = string_format(line)
 			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
@@ -136,7 +138,8 @@ def load_outputs():
 def load_authors():
 	session = connect()
 	#PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME
-	with open('data/authors_2013.csv', 'rb') as a:
+	with open('data/authors.csv', 'rb') as a:
+		next(a)
 		for line in reader(a, delimiter=','):
 			person,publication,name = line
 			com = "MATCH (s:Staff {person_id:"+person+"}) , (p:Publication {pub_id:"+publication+"}) merge (s)-[:PUBLISHED]-(p);"

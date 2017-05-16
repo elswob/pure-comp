@@ -122,119 +122,7 @@ def parse_json(pub_dic):
 		else:
 			print i+ ".json has no DOI"
 
-def similar(a, b):
-	return SequenceMatcher(None, a, b).ratio()
-
-def find_similar():
-	print "### Finding similar text"
-	print "Reading authors.csv"
-	pubAuthorDic = {}
-	if os.path.exists('output/outputs_same_authors.csv'):
-		print "Same author data already generated"
-	else:
-		w = open('output/outputs_same_authors.csv','w')
-		with open('data/authors.csv', 'rb') as a:
-			next(a)
-			for line in reader(a, delimiter=','):
-				PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME = line
-				if PUBLICATION_ID in pubAuthorDic:
-					pubAuthorDic[PUBLICATION_ID].append(PERSON_ID)
-				else:
-					pubAuthorDic[PUBLICATION_ID] = [PERSON_ID]
-		pubSameAuthorDic = {}
-		counter=0
-		for pub1 in pubAuthorDic:
-			if counter % 1000 == 0:
-				t = strftime("%H:%M:%S", gmtime())
-				print t,counter,len(pubAuthorDic)
-			counter+=1
-			for pub2 in pubAuthorDic:
-				if pub1 < pub2:
-					if sorted(pubAuthorDic[pub1])==sorted(pubAuthorDic[pub2]):
-						#w.write(str(pub1)+'\t'+str(pub2)+'\t'+str(",".join(pubAuthorDic[pub1]))+'\n')
-						s = sorted([pub1,pub2])
-						pubSameAuthorDic[s[0]+":"+s[1]]=pubAuthorDic[pub1]
-						#print pub1,pubAuthorDic[pub1],pub2,pubAuthorDic[pub2]
-
-		for p in pubSameAuthorDic:
-			w.write(p+'\t'+str(",".join(pubSameAuthorDic[p]))+'\n')
-
-	if os.path.exists('output/conflicting_titles.txt'):
-		print "Already created conflict files"
-	else:
-		#load outputs
-		pubDic = {}
-		with open('data/outputs.csv', 'rb') as a:
-			next(a)
-			for line in reader(a, delimiter=','):
-				PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
-				#pubDic[PUBLICATION_ID]=TITLE
-				#only want pubs with abstracsts > some length
-				#if len(ABSTRACT)>config.minAbsLength:
-				if TYPE != 'workingpaper/workingpaper':
-					pubDic[PUBLICATION_ID]=[TITLE,ABSTRACT]
-
-		threshold_ratio = 0.9
-		num_lines = sum(1 for line in open('output/outputs_same_authors.csv'))
-		counter=0
-		tCheck = open('output/conflicting_titles.txt','w')
-		aCheck = open('output/conflicting_abstracts.txt','w')
-		with open('output/outputs_same_authors.csv', 'rb') as a:
-			for line in a:
-				if counter % 10000 == 0:
-					t = strftime("%H:%M:%S", gmtime())
-					print t,counter,num_lines
-				counter+=1
-				line = line.rstrip()
-				pubs,authors = line.split('\t')
-				p1,p2 = pubs.split(':')
-
-				#check for people listed in authors but not in outputs
-				if p1 in pubDic and p2 in pubDic:
-					title1 = pubDic[p1][0]
-					title2 = pubDic[p2][0]
-					abs1 = pubDic[p1][1]
-					abs2 = pubDic[p2][1]
-
-					#compare titles
-					ratio = difflib.SequenceMatcher(None, title1, title2).ratio()
-					if ratio>threshold_ratio:
-						tCheck.write(str(ratio)+'||'+str(p1)+'||'+str(p2)+'||'+title1+'||'+title2+'\n')
-					#compare abstracts
-					if len(abs1) > config.minAbsLength and len(abs2) > config.minAbsLength:
-						ratio = difflib.SequenceMatcher(None, abs1, abs2).ratio()
-						if ratio>threshold_ratio:
-							aCheck.write(str(ratio)+'||'+str(p1)+'||'+str(p2)+'||'+abs1+'||'+abs2+'\n')
-
-	print "Parsing conflict files"
-	tDic = {}
-	with open('output/conflicting_titles.txt', 'rb') as a:
-		for line in a:
-			print line
-			ratio,p1,p2,pt1,pt2 = line.split('||')
-			if pt1 in tDic:
-				tDic[pt1].append(p1)
-			else:
-				tDic[pt1] = [p1]
-			if pt2 in tDic:
-				tDic[pt2].append(p2)
-			else:
-				tDic[pt2] = [p2]
-	print tDic
-
-def find_similar_by_author():
-	#read authors file
-	staffDic = defaultdict(dict)
-	with open(authors_2013, 'rb') as a:
-		next(a)
-		for line in reader(a, delimiter=','):
-			PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME = line
-			staffDic[PERSON_ID][PUBLICATION_ID]=''
-
-	#read outputs
-	#for pe in staffDic[PERSON_ID]
-
-def find_similar_titles_by_length():
+def find_similar_titles():
 	tSame = open('output/same_titles.txt','w')
 	pubDic = {}
 	with open(outputs, 'rb') as a:
@@ -267,7 +155,7 @@ def find_similar_titles_by_length():
 	for p in pubSameTitleDic:
 		tSame.write(p+'||'+",".join(pubSameTitleDic[p])+'\n')
 
-def find_similar_abstracts_by_length():
+def find_similar_abstracts():
 	aSame = open('output/same_abstracts.txt','w')
 	pubDic = {}
 	with open(outputs, 'rb') as a:
@@ -342,9 +230,8 @@ def main():
 	#pub_dic = get_xml()
 	#create_json(pub_dic)
 	#parse_json(pub_dic)
-	#find_similar()
-	find_similar_titles_by_length()
-	find_similar_abstracts_by_length()
-	#`ignore_pubs()
+	find_similar_titles()
+	find_similar_abstracts()
+	#ignore_pubs()
 if __name__ == '__main__':
 	main()
