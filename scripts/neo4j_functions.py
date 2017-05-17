@@ -128,7 +128,7 @@ def load_outputs():
 							PUBLICATION_DAY = '0'
 						com = "MERGE (p:Publication {pub_id:"+PUBLICATION_ID+",title:'"+TITLE+"',type:"+TYPE_NO+",pub_day:"+PUBLICATION_DAY+"," \
 						"pub_month:"+PUBLICATION_MONTH+",pub_year:"+PUBLICATION_YEAR+",abstract:'"+ABSTRACT+"'});"
-						print com
+						#print PUBLICATION_ID
 						session.run(com)
 					pubDic[PUBLICATION_ID]=''
 

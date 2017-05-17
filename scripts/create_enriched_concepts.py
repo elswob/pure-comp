@@ -1,6 +1,7 @@
 import nltk_functions, neo4j_functions, stats_functions, config
 import operator,os
 from collections import defaultdict
+from time import gmtime, strftime
 
 outDir='concepts/'
 
@@ -437,48 +438,51 @@ def add_enriched_to_graph(year):
 def add_pub_concepts(year):
 	print "Adding pub-concept data"
 	#read data
-	pubConceptDic = defaultdict(dict)
-	with open(outDir+'/pub_concept_'+str(year)+'.txt', 'rb') as p:
-		for line in p:
-			line = line.rstrip()
-			pid,name,type = line.split('\t')
-			pubConceptDic[name+":"+type][pid]=''
+	pubConceptDic = readPubConcepts(year)
 
 	session = neo4j_functions.connect()
 	#com = "match (c:Concept) return c.name as n, c.type as t;"
-	com = "match (a)-[e:ENRICHED]-(c:Concept) where e.year = "+str(year)+" return c.name as n, c.type as t;"
-	counter=0
+	#com = "match (p:Publication)--(s:Staff)-[e:ENRICHED]-(c:Concept) where e.year = "+str(year)+" return distinct p.pub_id as pid, c.name as n, c.type as t;"
+	com = "match (p:Publication)--(s:Staff)-[e:ENRICHED]-(c:Concept) where e.year = "+str(year)+" merge (p)-[cc:CONCEPT{year:"+str(year)+"}]-(c) return count(cc);"
+	print com
 	for res in session.run(com):
-		if counter % 1000 == 0:
-			print counter
-			session.close()
-			session = neo4j_functions.connect()
-		counter+=1
-		name = res['n']
-		name = name.replace("'", "\\'")
-		type = res['t']
-		cName = name+":"+type
-		#print len(pubConceptDic[cName]),cName
-		for p in pubConceptDic[cName]:
-			com = "match (p:Publication {pub_id:"+str(p)+",pub_year:"+str(year)+"}) match (c:Concept {name:'"+name+"',type:'"+type+"'}) merge (p)-[:CONCEPT{year:"+str(year)+"}]-(c);"
-			#print com
-			session.run(com)
+		print res
+	#counter=0
+	#for res in session.run(com):
+	#	if counter % 1000 == 0:
+	#		t = strftime("%H:%M:%S", gmtime())
+	#		print t,counter
+	#		session.close()
+	#		session = neo4j_functions.connect()
+	#	counter+=1
+	#	name = res['n']
+	#	name = name.replace("'", "\\'")
+	#	#type = res['t']
+	#	pid = res['pid']
+	#	#cName = name+":"+type
+	#	#print len(pubConceptDic[cName]),cName
+	#	#for p in pubConceptDic[cName]:
+	#	com = "match (p:Publication {pub_id:"+str(pid)+"}) match (c:Concept {name:'"+name+"'}) merge (p)-[:CONCEPT{year:"+str(year)+"}]-(c);"
+	#		#print com
+	#	session.run(com)
 
 def distance_metrics(year):
 	session = neo4j_functions.connect()
 	#staff
 	print "Creating staff distance data"
-	com="match (p1:Staff)-[e1:ENRICHED]->(s), (p2:Staff)-[e2:ENRICHED]->(s) where id(p1) < id(p2) and e1.year = "+str(year)+" and e2.year = "+str(year)+" with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_"+str(year)+" = euc;"
+	com="match (p1:Staff)-[e1:ENRICHED]->(s), (p2:Staff)-[e2:ENRICHED]->(s) where id(p1) < id(p2) and e1.year = "+str(year)+" and e2.year = "+str(year)+" with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_"+str(year)+" = euc return count(euc);"
 	print com
-	session.run(com)
+	for res in session.run(com):
+		print res
 	#orgs
 	print "Create org distance data"
-	com="match (p1:Org)-[e1:ENRICHED]->(s), (p2:Org)-[e2:ENRICHED]->(s) where id(p1) < id(p2) and e1.year = "+str(year)+" and e2.year = "+str(year)+" with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_"+str(year)+" = euc;"
+	com="match (p1:Org)-[e1:ENRICHED]->(s), (p2:Org)-[e2:ENRICHED]->(s) where id(p1) < id(p2) and e1.year = "+str(year)+" and e2.year = "+str(year)+" with sqrt(sum((-log10(e1.cpval) - -log10(e2.cpval))^2)) as euc,p1,p2 merge (p1)-[d:DISTANCE]-(p2) set d.euclidean_"+str(year)+" = euc return count(euc);"
 	print com
-	session.run(com)
+	for res in session.run(com):
+		print res
 
 if __name__ == '__main__':
-	for year in range(2008,2014):
+	for year in range(2008,2015):
 		print "##### "+str(year)+" ####"
 		if os.path.exists(outDir+'/background_type_frequencies_'+str(year)+'.txt'):
 			print 'Background frequencies already created'
@@ -494,8 +498,8 @@ if __name__ == '__main__':
 			org_frequencies(year)
 
 		#run enrichment steps
-		#enrich_person(year)
-		#enrich_orgs(year)
-		#add_enriched_to_graph(year)
+		enrich_person(year)
+		enrich_orgs(year)
+		add_enriched_to_graph(year)
 		add_pub_concepts(year)
 		distance_metrics(year)
