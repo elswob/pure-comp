@@ -214,12 +214,14 @@ def ignore_pubs():
 		pids = line.split('||')[1].split(',')
 		for p in pids[1:]:
 			iDic[p]=''
+	print len(iDic)
 	for line in open('output/same_abstracts.txt'):
 		line = line.rstrip()
 		pids = line.split('||')[1].split(',')
 		for p in pids[1:]:
 			iDic[p]=''
 	#print iDic
+	print len(iDic)
 	return iDic
 
 def main():
@@ -230,8 +232,9 @@ def main():
 	#pub_dic = get_xml()
 	#create_json(pub_dic)
 	#parse_json(pub_dic)
-	find_similar_titles()
-	find_similar_abstracts()
-	#ignore_pubs()
+	#find_similar_titles()
+	#find_similar_abstracts()
+	ignore_pubs()
+
 if __name__ == '__main__':
 	main()

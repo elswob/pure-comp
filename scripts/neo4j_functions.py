@@ -73,25 +73,32 @@ def load_staff():
 			person_id,published_name,forename,surname,organisation_code,type,job_title,start_date,end_date = line
 			if person_id not in staffDic:
 				counter+=1
-				com = "MATCH (o:Org {code:'"+organisation_code+"'}) MERGE (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
+				com = "MERGE (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
 				"forename: '"+forename+"',surname: '"+surname+"',organisation_code:'"+organisation_code+"'," \
 				"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'}) " \
-				"MERGE (s)-[:MEMBER_OF]-(o) return o.code as o;"
+				"return s.published_name;"
 				#print counter
+				print com
 				session.run(com)
-				#com = "MERGE (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
-				#"forename: '"+forename+"',surname: '"+surname+"',organisation_code:'"+organisation_code+"'," \
-				#"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'});"
-				#print com
-				#session.run(com)
-				#com2 = "MATCH (o:Org) where o.code = '"+organisation_code+"' return o.code as o;"
-				#print com2
-
-				#for res in session.run(com2):
-				#	print organisation_code,res['o'],counter
-					#if len(res['o.code'])
-
 			staffDic[person_id]=''
+
+	i="CREATE index on :Staff(person_id);"
+	session.run(i)
+
+	counter=0
+	with open('data/staff.csv', 'rb') as a:
+		next(a)
+		for line in reader(a, delimiter=','):
+			line = string_format(line)
+			person_id,published_name,forename,surname,organisation_code,type,job_title,start_date,end_date = line
+			counter+=1
+			com = "MATCH (o:Org {code:'"+organisation_code+"'}) MATCH (s:Staff {person_id: "+person_id+",published_name: '"+published_name+"', " \
+			"forename: '"+forename+"',surname: '"+surname+"',organisation_code:'"+organisation_code+"'," \
+			"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'}) " \
+			"MERGE (s)-[:MEMBER_OF]-(o) return s.published_name;"
+			#print counter
+			print com
+			session.run(com)
 
 	i="CREATE index on :Staff(person_id);"
 	session.run(i)
@@ -112,6 +119,7 @@ def load_outputs():
 
 	#PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT
 	pubDic = {}
+	counter=0
 	with open('data/outputs.csv', 'rb') as a:
 		next(a)
 		for line in reader(a, delimiter=','):
@@ -120,6 +128,10 @@ def load_outputs():
 			if PUBLICATION_ID not in ignorePubs:
 				if TYPE != 'workingpaper/workingpaper':
 					if PUBLICATION_ID not in pubDic:
+						if counter % 1000 == 0:
+							print str(counter)
+							session.close()
+							session = connect()
 						if PUBLICATION_YEAR == '':
 							PUBLICATION_YEAR = '0'
 						if PUBLICATION_MONTH == '':
@@ -128,7 +140,7 @@ def load_outputs():
 							PUBLICATION_DAY = '0'
 						com = "MERGE (p:Publication {pub_id:"+PUBLICATION_ID+",title:'"+TITLE+"',type:"+TYPE_NO+",pub_day:"+PUBLICATION_DAY+"," \
 						"pub_month:"+PUBLICATION_MONTH+",pub_year:"+PUBLICATION_YEAR+",abstract:'"+ABSTRACT+"'});"
-						#print PUBLICATION_ID
+						print PUBLICATION_ID
 						session.run(com)
 					pubDic[PUBLICATION_ID]=''
 
@@ -137,14 +149,20 @@ def load_outputs():
 
 def load_authors():
 	session = connect()
+	counter=0
 	#PERSON_ID,PUBLICATION_ID,PUBLISHED_NAME
 	with open('data/authors.csv', 'rb') as a:
 		next(a)
 		for line in reader(a, delimiter=','):
+			if counter % 1000 == 0:
+				print str(counter)
+				session.close()
+				session = connect()
 			person,publication,name = line
 			com = "MATCH (s:Staff {person_id:"+person+"}) , (p:Publication {pub_id:"+publication+"}) merge (s)-[:PUBLISHED]-(p);"
 			print com
-			session.run(com)
+			for r in session.run(com):
+				print r['p.pub_id']
 
 def load_enriched(com,type):
 	print "Loading enriched data"

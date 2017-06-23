@@ -8,7 +8,7 @@ from nltk.collocations import *
 from nltk import FreqDist
 from nltk.corpus import stopwords
 from collections import defaultdict
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 #import matplotlib
 #matplotlib.style.use('ggplot')
 from csv import reader

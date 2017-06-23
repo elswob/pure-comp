@@ -436,35 +436,56 @@ def add_enriched_to_graph(year):
 	session.close()
 
 def add_pub_concepts(year):
+
+	#this is all to slow, used neo4j csv import instead
+
+	#using periodic commit 10000 load CSV from "file:///pub_concept_2008.txt" as row FIELDTERMINATOR '\t' match (p:Publication{pub_id:toInt(row[0])}) match (c:Concept{name:row[1]}) merge (p)-[:CONCEPT{year:2008}]-(c) return count(p);
+
 	print "Adding pub-concept data"
-	#read data
-	pubConceptDic = readPubConcepts(year)
 
 	session = neo4j_functions.connect()
-	#com = "match (c:Concept) return c.name as n, c.type as t;"
-	#com = "match (p:Publication)--(s:Staff)-[e:ENRICHED]-(c:Concept) where e.year = "+str(year)+" return distinct p.pub_id as pid, c.name as n, c.type as t;"
-	com = "match (p:Publication)--(s:Staff)-[e:ENRICHED]-(c:Concept) where e.year = "+str(year)+" merge (p)-[cc:CONCEPT{year:"+str(year)+"}]-(c) return count(cc);"
-	print com
-	for res in session.run(com):
-		print res
-	#counter=0
-	#for res in session.run(com):
-	#	if counter % 1000 == 0:
-	#		t = strftime("%H:%M:%S", gmtime())
-	#		print t,counter
-	#		session.close()
-	#		session = neo4j_functions.connect()
-	#	counter+=1
-	#	name = res['n']
-	#	name = name.replace("'", "\\'")
-	#	#type = res['t']
-	#	pid = res['pid']
-	#	#cName = name+":"+type
-	#	#print len(pubConceptDic[cName]),cName
-	#	#for p in pubConceptDic[cName]:
-	#	com = "match (p:Publication {pub_id:"+str(pid)+"}) match (c:Concept {name:'"+name+"'}) merge (p)-[:CONCEPT{year:"+str(year)+"}]-(c);"
-	#		#print com
-	#	session.run(com)
+
+	#read data
+	pubConceptDic = readPubConcepts(year)
+	counter=0
+	for p in pubConceptDic:
+		for c in pubConceptDic[p]:
+			c = c.replace("'", "\\'")
+			if counter % 10000 == 0:
+				t = strftime("%H:%M:%S", gmtime())
+				print t,counter
+				session.close()
+				session = neo4j_functions.connect()
+			com = "match (p:Publication {pub_id:"+str(p)+"}) match (c:Concept {name:'"+c+"'}) merge (p)-[:CONCEPT{year:"+str(year)+"}]-(c);"
+			session.run(com)
+			counter+=1
+
+	#
+	# #com = "match (c:Concept) return c.name as n, c.type as t;"
+	# com = "match (p:Publication)--(s:Staff)-[e:ENRICHED]-(c:Concept) where p.pub_year <= "+str(year)+" and e.year = "+str(year)+" return distinct p.pub_id as pid, c.name as n, c.type as t;"
+	# #com = "match (p:Publication)--(s:Staff)-[e:ENRICHED]-(c:Concept) where e.year = "+str(year)+" merge (p)-[cc:CONCEPT{year:"+str(year)+"}]-(c) return count(cc);"
+	# print com
+	# for res in session.run(com):
+	# 	if counter % 100 == 0:
+	# 		t = strftime("%H:%M:%S", gmtime())
+	# 		print t,counter
+	# 	counter+=1
+	# 	name = res['n']
+	# 	name = name.replace("'", "\\'")
+	# 	#type = res['t']
+	# 	pid = str(res['pid'])
+	# 	#cName = name+":"+type
+	# 	#print len(pubConceptDic[cName]),cName
+	# 	counter2=0
+	# 	session.close()
+	# 	session = neo4j_functions.connect()
+	# 	for p in pubConceptDic[pid]:
+	# 		#if counter % 10 == 0:
+	# 		#	print counter2,len(pubConceptDic[pid])
+	# 		#counter2+=1
+	# 		com = "match (p:Publication {pub_id:"+str(pid)+"}) match (c:Concept {name:'"+name+"'}) merge (p)-[:CONCEPT{year:"+str(year)+"}]-(c);"
+	# 		#print com
+	# 		session.run(com)
 
 def distance_metrics(year):
 	session = neo4j_functions.connect()
@@ -482,7 +503,7 @@ def distance_metrics(year):
 		print res
 
 if __name__ == '__main__':
-	for year in range(2008,2015):
+	for year in range(2014,2015):
 		print "##### "+str(year)+" ####"
 		if os.path.exists(outDir+'/background_type_frequencies_'+str(year)+'.txt'):
 			print 'Background frequencies already created'
@@ -497,9 +518,8 @@ if __name__ == '__main__':
 		else:
 			org_frequencies(year)
 
-		#run enrichment steps
+		####run enrichment steps
 		enrich_person(year)
 		enrich_orgs(year)
 		add_enriched_to_graph(year)
-		add_pub_concepts(year)
 		distance_metrics(year)
