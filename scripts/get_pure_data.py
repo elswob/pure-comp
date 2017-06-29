@@ -120,12 +120,27 @@ def parse_json():
 
 			print uuid,title,abstract
 
+def get_people():
+	pDic={}
+	for i in range(0,7):
+		url = 'http://research-information.bristol.ac.uk/en/persons/search.html?filter=academic&page='+str(i)+'&pageSize=500'
+		print url
+		res = requests.get(url)
+		uuid = re.findall('persons/(.*?)\((.*?)\).html', res.text)
+		#print uuid
+		for u in uuid:
+			name = u[0].replace('-',' ').title()
+			uuid = u[1]
+			pDic[uuid]=name
+	print len(pDic)
+
 def main():
 	#get_xml()
-	get_long()
+	#get_long()
 	#parse_long()
 	#xml_to_json()
 	#parse_json()
+	get_people()
 
 if __name__ == '__main__':
 	main()
