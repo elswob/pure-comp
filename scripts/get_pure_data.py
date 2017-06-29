@@ -6,7 +6,7 @@ import re
 import xmltodict
 from time import gmtime, strftime
 
-dataDir = '/Users/be15516/projects/pure-comp/data/'
+dataDir = '/Users/be15516/projects/pure-comp/data/pure_29_06_17/'
 fSize=1000
 totalPubs = 160000
 
@@ -55,7 +55,7 @@ def parse_long():
 	absData = ''
 	uuid = ''
 	absDic = {}
-	o = gzip.open('data/absData.txt.gz','a')
+	o = gzip.open(dataDir+'/absData.txt.gz','a')
 	for i in range(0,totalPubs,fSize):
 		fName = 'pure_'+str(i)+'.long.gz'
 		print "Reading "+fName
@@ -122,7 +122,7 @@ def parse_json():
 
 def get_people():
 	pDic={}
-	o = open('data/all_people.txt','w')
+	o = open(dataDir+'/all_people.txt','w')
 	for i in range(0,7):
 		url = 'http://research-information.bristol.ac.uk/en/persons/search.html?filter=academic&page='+str(i)+'&pageSize=500'
 		print url
@@ -140,10 +140,10 @@ def get_people():
 def get_orgs():
 	orgDic={}
 	person_to_org = {}
-	orgDicOut = open('data/org_to_name.txt','w')
-	person_to_org_out = open('data/person_to_org.txt','w')
+	orgDicOut = open(dataDir+'/org_to_name.txt','w')
+	person_to_org_out = open(dataDir+'/person_to_org.txt','w')
 	counter=0
-	with open('data/all_people.txt','r') as f:
+	with open(dataDir+'/all_people.txt','r') as f:
 		for line in f:
 			if counter % 100 == 0:
 				print counter
@@ -168,6 +168,39 @@ def get_orgs():
 	for i in person_to_org:
 		person_to_org_out.write(i+'\t'+(',').join(person_to_org[i])+'\n')
 
+def people_to_pubs():
+	print "Running people_to_pubs..."
+
+	pCheck = {}
+	#check for data
+	if os.path.isfile(dataDir+'people_to_pubs.txt'):
+		print "Reading previous data"
+		f = open(dataDir+'people_to_pubs.txt', 'r')
+		for line in f:
+			line = line.rstrip()
+			uuid = line.split("\t")[0]
+			pCheck[uuid]=''
+		f.close()
+
+	counter=0
+	f = open(dataDir+'all_people.txt', 'r')
+	o = open(dataDir+'people_to_pubs.txt','a')
+	for line in f:
+		uuid = line.split("\t")[0]
+		if uuid not in pCheck:
+			if counter % 100 == 0:
+				print counter
+			counter+=1
+			line = line.rstrip()
+			#using rest
+			url = 'https://research-information.bris.ac.uk/ws/rest/publication?window.size=2000&associatedPersonUuids.uuid='
+			url = url+uuid
+			print url
+			res = requests.get(url)
+			#o.write(res.text.encode('utf-8'))
+			pubMatch = re.findall('publications/.*?\((.*?)\).html',res.text.encode('utf-8'))
+			o.write(uuid+"\t"+",".join(list(set(pubMatch)))+"\n")
+
 
 def main():
 	#get_xml()
@@ -176,7 +209,8 @@ def main():
 	#xml_to_json()
 	#parse_json()
 	#get_people()
-	get_orgs()
+	#get_orgs()
+	people_to_pubs()
 
 if __name__ == '__main__':
 	main()
