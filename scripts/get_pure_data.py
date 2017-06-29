@@ -122,6 +122,7 @@ def parse_json():
 
 def get_people():
 	pDic={}
+	o = open('data/all_people.txt','w')
 	for i in range(0,7):
 		url = 'http://research-information.bristol.ac.uk/en/persons/search.html?filter=academic&page='+str(i)+'&pageSize=500'
 		print url
@@ -133,6 +134,40 @@ def get_people():
 			uuid = u[1]
 			pDic[uuid]=name
 	print len(pDic)
+	for p in pDic:
+		o.write(p+'\t'+pDic[p]+'\n')
+
+def get_orgs():
+	orgDic={}
+	person_to_org = {}
+	orgDicOut = open('data/org_to_name.txt','w')
+	person_to_org_out = open('data/person_to_org.txt','w')
+	counter=0
+	with open('data/all_people.txt','r') as f:
+		for line in f:
+			if counter % 100 == 0:
+				print counter
+			counter+=1
+			uuid,name = line.split('\t')
+			name = name.rstrip()
+			url = 'http://research-information.bristol.ac.uk/en/persons/xxx('+uuid+').html'
+			print url
+			res = requests.get(url)
+			#http://research-information.bristol.ac.uk/en/organisations/school-of-social-and-community-medicine(f54add52-720b-4679-8119-24ec3aaf6f63).html
+			orgs = re.findall('organisations/(.*?)\((.*?)\).html', res.text)
+			for o in orgs:
+				org_name = o[0].replace('-',' ').title()
+				org_uuid = o[1]
+				orgDic[org_uuid]=org_name
+				if uuid in person_to_org:
+					person_to_org[uuid].append(org_uuid)
+				else:
+					person_to_org[uuid]=[org_uuid]
+	for i in orgDic:
+		orgDicOut.write(i+'\t'+orgDic[i]+'\n')
+	for i in person_to_org:
+		person_to_org_out.write(i+'\t'+(',').join(person_to_org[i])+'\n')
+
 
 def main():
 	#get_xml()
@@ -140,7 +175,8 @@ def main():
 	#parse_long()
 	#xml_to_json()
 	#parse_json()
-	get_people()
+	#get_people()
+	get_orgs()
 
 if __name__ == '__main__':
 	main()
