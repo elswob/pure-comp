@@ -5,10 +5,16 @@ import gzip
 import re
 import xmltodict
 from time import gmtime, strftime
+#add this for utf-8 encding issues
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 dataDir = '/Users/be15516/projects/pure-comp/data/pure_29_06_17/'
 fSize=1000
+#fSize=3
 totalPubs = 160000
+#totalPubs = 10
 
 def is_non_zero_file(fpath):
     return os.path.isfile(fpath) and os.path.getsize(fpath) > 35
@@ -109,16 +115,39 @@ def xml_to_json():
 				w.close()
 
 def parse_json():
-	fName = 'pure_0.json.gz'
-	with gzip.open(dataDir+'/json/'+fName) as data_file:
-		json_data = json.load(data_file)
-		for j in json_data['publication-template:GetPublicationResponse']['core:result']['core:content']:
-			uuid = title = abstract = ''
-			uuid = j['@uuid']
-			if 'publication-base_uk:title' in j:
-				title = j['publication-base_uk:title'].encode('utf-8')
-
-			print uuid,title,abstract
+	o = open(dataDir+'publication_data.txt','a')
+	for i in range(0,totalPubs,fSize):
+		fName = 'pure_'+str(i)+'.json.gz'
+		print fName
+		with gzip.open(dataDir+'/json/'+fName) as data_file:
+			json_data = json.load(data_file)
+			for j in json_data['publication-template:GetPublicationResponse']['core:result']['core:content']:
+				uuid = title = journal_title = pub_date = doi = ''
+				#uuid
+				if '@uuid' in j:
+					uuid = j['@uuid']
+				else:
+					print fName,'has no uuid'
+				#title
+				if 'publication-base_uk:title' in j:
+					print j['publication-base_uk:title']
+					title = j['publication-base_uk:title']
+					#title = ''
+				#journal
+				if 'publication-base_uk:journal' in j:
+					if 'journal-template:title' in j['publication-base_uk:journal']:
+						journal_title = j['publication-base_uk:journal']['journal-template:title']['extensions-core:string']
+				#date
+				if 'publication-base_uk:publicationDate' in j:
+					if 'core:year' in j['publication-base_uk:publicationDate']:
+						y = j['publication-base_uk:publicationDate']['core:year']
+					pub_date = y
+				#doi
+				if 'publication-base_uk:dois' in j:
+					doi = j['publication-base_uk:dois']['core:doi']['core:doi']
+				print uuid,pub_date,journal_title,title,doi
+				o.write(uuid+'\t'+pub_date+'\t'+journal_title+'\t'+title+'\t'+doi+'\n')
+	o.close()
 
 def get_people():
 	pDic={}
@@ -181,6 +210,7 @@ def people_to_pubs():
 			uuid = line.split("\t")[0]
 			pCheck[uuid]=''
 		f.close()
+	print len(pCheck)
 
 	counter=0
 	f = open(dataDir+'all_people.txt', 'r')
@@ -201,16 +231,40 @@ def people_to_pubs():
 			pubMatch = re.findall('publications/.*?\((.*?)\).html',res.text.encode('utf-8'))
 			o.write(uuid+"\t"+",".join(list(set(pubMatch)))+"\n")
 
+def person_person_number():
+	print "Running person_person_number"
+	i = open(dataDir+'people_to_pubs.txt','r')
+	o = open(dataDir+'person_person_pub.txt','w')
+	pDic = {}
+	for line in i:
+		line = line.rstrip()
+		if len(line.split('\t'))==2:
+			name,pubs = line.split('\t')
+			pubList = pubs.split(',')
+			pDic[name]=pubList
+	pComDic = {}
+	for p1 in pDic:
+		for p2 in pDic:
+			if p1 != p2:
+				pPair = sorted([p1,p2])
+				pPairString = ':'.join(pPair)
+				if pPairString not in pComDic:
+					pComDic[pPairString]=''
+					c = set(pDic[p1]) & set(pDic[p2])
+					if len(c)>0:
+						o.write(p1+'\t'+p2+'\t'+str(len(c))+'\n')
+					#print p1,p2,len(c)
 
 def main():
-	#get_xml()
+	get_xml()
 	#get_long()
 	#parse_long()
-	#xml_to_json()
-	#parse_json()
+	xml_to_json()
+	parse_json()
 	#get_people()
 	#get_orgs()
-	people_to_pubs()
+	#people_to_pubs()
+	#person_person_number()
 
 if __name__ == '__main__':
 	main()
