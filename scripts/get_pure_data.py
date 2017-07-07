@@ -17,7 +17,7 @@ totalPubs = 160000
 #totalPubs = 10
 
 def is_non_zero_file(fpath):
-    return os.path.isfile(fpath) and os.path.getsize(fpath) > 35
+    return os.path.isfile(fpath) and os.path.getsize(fpath) > 100
 
 def get_xml():
 	print "Getting pure xml"
@@ -110,43 +110,69 @@ def xml_to_json():
 				print 'Converting '+fName_xml+' to JSON'
 				w = gzip.open(dataDir+'/json/'+fName_json,'w')
 				with gzip.open(dataDir+'/xml/'+fName_xml) as fd:
-					doc = xmltodict.parse(fd.read())
-					w.write(json.dumps(doc))
+					try:
+						doc = xmltodict.parse(fd.read())
+						w.write(json.dumps(doc))
+					except:
+						print "something wrong"
+
 				w.close()
 
 def parse_json():
-	o = open(dataDir+'publication_data.txt','a')
+	pubDic = {}
 	for i in range(0,totalPubs,fSize):
 		fName = 'pure_'+str(i)+'.json.gz'
 		print fName
-		with gzip.open(dataDir+'/json/'+fName) as data_file:
-			json_data = json.load(data_file)
-			for j in json_data['publication-template:GetPublicationResponse']['core:result']['core:content']:
-				uuid = title = journal_title = pub_date = doi = ''
-				#uuid
-				if '@uuid' in j:
-					uuid = j['@uuid']
-				else:
-					print fName,'has no uuid'
-				#title
-				if 'publication-base_uk:title' in j:
-					print j['publication-base_uk:title']
-					title = j['publication-base_uk:title']
-					#title = ''
-				#journal
-				if 'publication-base_uk:journal' in j:
-					if 'journal-template:title' in j['publication-base_uk:journal']:
-						journal_title = j['publication-base_uk:journal']['journal-template:title']['extensions-core:string']
-				#date
-				if 'publication-base_uk:publicationDate' in j:
-					if 'core:year' in j['publication-base_uk:publicationDate']:
-						y = j['publication-base_uk:publicationDate']['core:year']
-					pub_date = y
-				#doi
-				if 'publication-base_uk:dois' in j:
-					doi = j['publication-base_uk:dois']['core:doi']['core:doi']
-				print uuid,pub_date,journal_title,title,doi
-				o.write(uuid+'\t'+pub_date+'\t'+journal_title+'\t'+title+'\t'+doi+'\n')
+		uuid = title = journal_title = pub_date = doi = ''
+		if is_non_zero_file(dataDir+'/json/'+fName):
+			with gzip.open(dataDir+'/json/'+fName) as data_file:
+				json_data = json.load(data_file)
+				try:
+					for j in json_data['publication-template:GetPublicationResponse']['core:result']['core:content']:
+						#uuid
+						if '@uuid' in j:
+							if uuid != '' and uuid != None:
+								#print uuid,pub_date,journal_title,title,doi
+								pData = str(pub_date)+'\t'+str(journal_title)+'\t'+str(title)+'\t'+str(doi)
+								pubDic[uuid]=pData
+							uuid = title = journal_title = pub_date = doi = ''
+							uuid = j['@uuid']
+						else:
+							print fName,'has no uuid'
+						#title
+						if 'publication-base_uk:title' in j:
+							#print j['publication-base_uk:title']
+							title = j['publication-base_uk:title']
+							#title = ''
+						#journal
+						if 'publication-base_uk:journal' in j:
+							if 'journal-template:title' in j['publication-base_uk:journal']:
+								journal_title = j['publication-base_uk:journal']['journal-template:title']['extensions-core:string']
+						#date
+						if 'publication-base_uk:publicationDate' in j:
+							if 'core:year' in j['publication-base_uk:publicationDate']:
+								y = j['publication-base_uk:publicationDate']['core:year']
+							pub_date = y
+						#doi
+						if 'publication-base_uk:dois' in j:
+							try:
+								#if ['core:doi'] in j['publication-base_uk:dois']['core:doi']:
+								doi = j['publication-base_uk:dois']['core:doi']['core:doi']
+							except:
+								print 'doi error'
+				except:
+					fName,'problem'
+		else:
+			print fName,'does not exist'
+
+		#catch last one
+		#print uuid,pub_date,journal_title,title,doi
+		pubDic[uuid]=pub_date+'\t'+journal_title+'\t'+title+'\t'+doi
+
+	#write to file
+	o = open(dataDir+'publication_data.txt','w')
+	for p in pubDic:
+		o.write(p+'\t'+pubDic[p]+'\n')
 	o.close()
 
 def get_people():
@@ -256,10 +282,10 @@ def person_person_number():
 					#print p1,p2,len(c)
 
 def main():
-	get_xml()
+	#get_xml()
 	#get_long()
 	#parse_long()
-	xml_to_json()
+	#xml_to_json()
 	parse_json()
 	#get_people()
 	#get_orgs()
