@@ -521,5 +521,5 @@ if __name__ == '__main__':
 		####run enrichment steps
 		enrich_person(year)
 		enrich_orgs(year)
-		add_enriched_to_graph(year)
-		distance_metrics(year)
+		#add_enriched_to_graph(year)
+		#distance_metrics(year)

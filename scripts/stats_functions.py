@@ -4,7 +4,7 @@ import neo4j_functions
 
 def pubs_per_org():
 	session = neo4j_functions.connect()
-	com = 'match (o:Org)--(s:Staff)--(p:Publication) return o.code as o,count(distinct(p)) as c;'
+	com = 'match (o:Org)-[:MEMBER_OF]-(s:Staff)-[:PUBLISHED]-(p:Publication) return o.code as o,count(distinct(p)) as c;'
 	oDic = {}
 	for res in session.run(com):
 		oDic[res['o']] = res['c']
@@ -12,7 +12,7 @@ def pubs_per_org():
 
 def pubs_per_person():
 	session = neo4j_functions.connect()
-	com = 'match (s:Staff)--(p:Publication) return s.person_id as p,count(p) as c;'
+	com = 'match (s:Staff)-[:PUBLISHED]-(p:Publication) return s.person_id as p,count(p) as c;'
 	pDic = {}
 	for res in session.run(com):
 		pDic[res['p']] = res['c']
@@ -20,7 +20,7 @@ def pubs_per_person():
 
 def staff_per_org():
 	session = neo4j_functions.connect()
-	com = ' match (o:Org)--(s:Staff) return o.code as o,count(s) as c;'
+	com = ' match (o:Org)-[:MEMBER_OF]-(s:Staff) return o.code as o,count(s) as c;'
 	sDic = {}
 	for res in session.run(com):
 		sDic[res['o']] = res['c']

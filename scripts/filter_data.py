@@ -129,7 +129,7 @@ def find_similar_titles():
 		next(a)
 		for line in reader(a, delimiter=','):
 			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
-			pubDic[PUBLICATION_ID]=TITLE
+			pubDic[PUBLICATION_ID]=TITLE.rstrip()
 
 	pubSameTitleDic = {}
 	counter=0

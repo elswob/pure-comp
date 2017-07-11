@@ -78,8 +78,8 @@ def load_staff():
 				"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'}) " \
 				"return s.published_name;"
 				#print counter
-				print com
-				session.run(com)
+				for res in session.run(com):
+					print com
 			staffDic[person_id]=''
 
 	i="CREATE index on :Staff(person_id);"
@@ -97,8 +97,8 @@ def load_staff():
 			"type:'"+type+"',job_title:'"+job_title+"',start_date:'"+start_date+"',end_date:'"+end_date+"'}) " \
 			"MERGE (s)-[:MEMBER_OF]-(o) return s.published_name;"
 			#print counter
-			print com
-			session.run(com)
+			for res in session.run(com):
+				print com
 
 	i="CREATE index on :Staff(person_id);"
 	session.run(i)
@@ -123,6 +123,7 @@ def load_outputs():
 	with open('data/outputs.csv', 'rb') as a:
 		next(a)
 		for line in reader(a, delimiter=','):
+			counter+=1
 			line = string_format(line)
 			PUBLICATION_ID,TITLE,TYPE_NO,TYPE,PUBLICATION_DAY,PUBLICATION_MONTH,PUBLICATION_YEAR,KEYWORDS,ABSTRACT = line
 			if PUBLICATION_ID not in ignorePubs:
@@ -140,8 +141,9 @@ def load_outputs():
 							PUBLICATION_DAY = '0'
 						com = "MERGE (p:Publication {pub_id:"+PUBLICATION_ID+",title:'"+TITLE+"',type:"+TYPE_NO+",pub_day:"+PUBLICATION_DAY+"," \
 						"pub_month:"+PUBLICATION_MONTH+",pub_year:"+PUBLICATION_YEAR+",abstract:'"+ABSTRACT+"'});"
-						print PUBLICATION_ID
-						session.run(com)
+
+						for res in session.run(com):
+							print com
 					pubDic[PUBLICATION_ID]=''
 
 	i="CREATE index on :Publication(pub_id);"
@@ -158,9 +160,10 @@ def load_authors():
 				print str(counter)
 				session.close()
 				session = connect()
+			counter+=1
 			person,publication,name = line
 			com = "MATCH (s:Staff {person_id:"+person+"}) , (p:Publication {pub_id:"+publication+"}) merge (s)-[:PUBLISHED]-(p);"
-			print com
+			#print com
 			for r in session.run(com):
 				print r['p.pub_id']
 
@@ -170,9 +173,10 @@ def load_enriched(com,type):
 
 def load_data():
 	print 'Loading data'
-	load_org()
-	load_staff()
-	load_outputs()
+	#neo4j_check()
+	#load_org()
+	#load_staff()
+	#load_outputs()
 	load_authors()
 
 if __name__ == '__main__':
